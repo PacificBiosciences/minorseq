@@ -52,7 +52,6 @@
 
 #include <pacbio/data/ArrayRead.h>
 #include <pacbio/data/MSA.h>
-#include <pacbio/io/Utility.h>
 #include <pbbam/BamRecord.h>
 
 #include <pacbio/fuse/Fuse.h>

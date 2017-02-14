@@ -42,13 +42,13 @@
 #include <vector>
 
 #include <pbcopper/cli/CLI.h>
+#include <pbcopper/utility/FileUtils.h>
 
 #include <pbbam/BamReader.h>
 #include <pbbam/FastaReader.h>
 
 #include <pacbio/cleric/Cleric.h>
 #include <pacbio/cleric/ClericSettings.h>
-#include <pacbio/io/Utility.h>
 
 namespace {
 using namespace PacBio::Cleric;
@@ -126,7 +126,7 @@ static int Runner(const PacBio::CLI::Results &options) {
 
   std::string output;
   if (settings.OutputPrefix.empty())
-    output = PacBio::IO::FilePrefix(bamPath) + "_cleric.bam";
+    output = PacBio::Utility::FilePrefix(bamPath) + "_cleric.bam";
   else
     output = settings.OutputPrefix + ".bam";
 
