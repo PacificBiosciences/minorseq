@@ -39,6 +39,8 @@
 
 #include <boost/optional.hpp>
 
+#include <pacbio/data/QvThresholds.h>
+
 namespace PacBio {
 namespace Data {
 
@@ -68,6 +70,11 @@ struct ArrayBase
     }
     ArrayBase(char cigar, char nucleotide) : Cigar(cigar), Nucleotide(nucleotide) {}
 
+    bool MeetQVThresholds(const QvThresholds& qvs) const
+    {
+        return MeetQualQVThreshold(qvs.QualQV) && MeetDelQVThreshold(qvs.DelQV) &&
+               MeetSubQVThreshold(qvs.SubQV) && MeetInsQVThreshold(qvs.InsQV);
+    }
     bool MeetQualQVThreshold(boost::optional<uint8_t> threshold) const
     {
         return !threshold || !QualQV || *QualQV >= *threshold;

@@ -54,70 +54,19 @@
 
 #include <boost/optional.hpp>
 
-#include <pacbio/data/MSA.h>
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pbcopper/json/JSON.h>
 
 namespace PacBio {
 namespace Juliet {
-AminoAcidCaller::AminoAcidCaller(const std::vector<Data::ArrayRead>& reads,
+AminoAcidCaller::AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
                                  const ErrorEstimates& error, const TargetConfig& targetConfig)
-    : error_(error), targetConfig_(targetConfig)
+    : nucMatrix_(reads), error_(error), targetConfig_(targetConfig)
 {
-    auto SetQV = [](const char* env, boost::optional<uint8_t>* qv,
-                    boost::optional<uint8_t> defaultQv = boost::none) {
-        char* val = std::getenv(env);
-        *qv = val == NULL ? defaultQv : std::stoi(std::string(val));
-    };
-    SetQV("DELQV", &delQv_);
-    SetQV("SUBQV", &subQv_, 42);
-    SetQV("INSQV", &insQv_);
-    SetQV("QUALQV", &qualQv_);
+    msa_ = std::unique_ptr<Data::MSAByColumn>(new Data::MSAByColumn(reads));
 
-    for (const auto& r : reads) {
-        beginPos_ = std::min(beginPos_, r.ReferenceStart());
-        endPos_ = std::max(endPos_, r.ReferenceEnd());
-    }
-    msa_ = std::unique_ptr<Data::MSA>(new Data::MSA(reads, qualQv_, delQv_, subQv_, insQv_));
-
-    GenerateMSA(reads);
-
-    beginPos_ += 1;
-    endPos_ += 1;
-
-    CallVariants(reads);
-}
-
-void AminoAcidCaller::GenerateMSA(const std::vector<Data::ArrayRead>& reads)
-{
-    matrix_.reserve(reads.size());
-    for (const auto& r : reads) {
-        int pos = r.ReferenceStart() - beginPos_;
-        assert(pos >= 0);
-        std::vector<char> row(endPos_ - beginPos_, ' ');
-        for (const auto& b : r.Bases) {
-            switch (b.Cigar) {
-                case 'X':
-                case '=':
-                    if ((b.MeetDelQVThreshold(delQv_)) && (b.MeetInsQVThreshold(insQv_)) &&
-                        (b.MeetSubQVThreshold(subQv_)) && (b.MeetQualQVThreshold(qualQv_)))
-                        row[pos++] = b.Nucleotide;
-                    else
-                        row[pos++] = '-';
-                    break;
-                case 'D':
-                    row[pos++] = '-';
-                    break;
-                case 'I':
-                case 'P':
-                    break;
-                default:
-                    throw std::runtime_error("Unexpected cigar " + std::to_string(b.Cigar));
-            }
-        }
-        matrix_.emplace_back(row);
-    }
+    CallVariants();
 }
 
 int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) const
@@ -130,10 +79,11 @@ int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) co
             // Only work on beginnings of a codon
             if (ri % 3 != 0) continue;
             // Relative to window begin
-            const int bi = i - beginPos_;
+            const int bi = i - nucMatrix_.BeginPos;
 
             std::unordered_map<std::string, int> codons;
-            for (const auto& row : matrix_) {
+            for (const auto& nucRow : nucMatrix_.Matrix) {
+                const auto& row = nucRow.Bases;
                 // Read does not cover codon
                 if (bi + 2 >= static_cast<int>(row.size()) || bi < 0) continue;
                 if (row.at(bi + 0) == ' ' || row.at(bi + 1) == ' ' || row.at(bi + 2) == ' ')
@@ -175,13 +125,13 @@ std::string AminoAcidCaller::FindDRMs(const std::string& geneName,
     }
     return drmSummary;
 };
-void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead>& reads)
+void AminoAcidCaller::CallVariants()
 {
     auto genes = targetConfig_.targetGenes;
     bool hasReference = !targetConfig_.referenceSequence.empty();
     // If no user config has been provided, use complete input region
     if (genes.empty()) {
-        TargetGene tg(beginPos_, endPos_, "unknown", {});
+        TargetGene tg(nucMatrix_.BeginPos, nucMatrix_.EndPos, "unknown", {});
         genes.emplace_back(tg);
     }
 
@@ -283,14 +233,15 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead>& reads)
             // Only work on beginnings of a codon
             if (ri % 3 != 0) continue;
             // Relative to window begin
-            const int bi = i - beginPos_;
+            const int bi = i - nucMatrix_.BeginPos;
 
             const int codonPos = 1 + (ri / 3);
             auto& curVariantPosition = curVariantGene.relPositionToVariant[codonPos];
 
             std::map<std::string, int> codons;
             int coverage = 0;
-            for (const auto& row : matrix_) {
+            for (const auto& nucRow : nucMatrix_.Matrix) {
+                const auto& row = nucRow.Bases;
                 // Read does not cover codon
                 if (bi + 2 > static_cast<int>(row.size()) || bi < 0) continue;
                 if (row.at(bi + 0) == ' ' || row.at(bi + 1) == ' ' || row.at(bi + 2) == ' ')
@@ -363,7 +314,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead>& reads)
             if (!curVariantPosition.aminoAcidToCodons.empty()) {
                 curVariantPosition.coverage = coverage;
                 for (int j = -3; j < 6; ++j) {
-                    if (i + j >= beginPos_ && i + j < endPos_) {
+                    if (i + j >= nucMatrix_.BeginPos && i + j < nucMatrix_.EndPos) {
                         int abs = ai + j;
                         JSON::Json msaCounts;
                         msaCounts["rel_pos"] = j;

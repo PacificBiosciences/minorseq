@@ -51,7 +51,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pacbio/data/MSA.h>
+#include <pacbio/data/MSAByColumn.h>
+#include <pacbio/data/MSAByRow.h>
 #include <pacbio/juliet/ErrorEstimates.h>
 #include <pacbio/juliet/TargetConfig.h>
 #include <pacbio/juliet/VariantGene.h>
@@ -65,8 +66,8 @@ namespace Juliet {
 class AminoAcidCaller
 {
 public:
-    AminoAcidCaller(const std::vector<Data::ArrayRead>& reads, const ErrorEstimates& error,
-                    const TargetConfig& targetConfig);
+    AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
+                    const ErrorEstimates& error, const TargetConfig& targetConfig);
 
 public:
     /// Generate JSON output of variant amino acids
@@ -77,38 +78,22 @@ public:
     static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
 
 public:
-    std::unique_ptr<Data::MSA> msa_;
+    std::unique_ptr<Data::MSAByColumn> msa_;
 
 private:
     static constexpr float alpha = 0.01;
-    void GenerateMSA(const std::vector<Data::ArrayRead>& reads);
-    void CallVariants(const std::vector<Data::ArrayRead>& reads);
+    void CallVariants();
     int CountNumberOfTests(const std::vector<TargetGene>& genes) const;
     std::string FindDRMs(const std::string& geneName, const std::vector<TargetGene>& genes,
                          const int position) const;
 
 private:
-    int beginPos_ = std::numeric_limits<int>::max();
-    int endPos_ = 0;
-    std::vector<std::vector<char>> matrix_;
+    Data::MSAByRow nucMatrix_;
     std::vector<VariantGene> variantGenes_;
     const ErrorEstimates error_;
     const TargetConfig targetConfig_;
 
-    boost::optional<uint8_t> delQv_;
-    boost::optional<uint8_t> subQv_;
-    boost::optional<uint8_t> insQv_;
-    boost::optional<uint8_t> qualQv_;
-
     static const std::unordered_map<std::string, char> codonToAmino_;
-
-    static const std::vector<int> nnrti;
-    static const std::vector<int> nnrtiSurveillance;
-    static const std::vector<int> nrti;
-    static const std::vector<int> nrtiSurveillance;
-    static const std::vector<int> pi;
-    static const std::vector<int> piSurveillance;
-    static const std::vector<int> ini;
 };
 }
 }  // ::PacBio::Juliet
