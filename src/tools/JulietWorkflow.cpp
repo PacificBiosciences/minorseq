@@ -65,146 +65,142 @@
 namespace PacBio {
 namespace Juliet {
 
-std::ostream &JulietWorkflow::LogCI(const std::string &prefix) {
-  std::cout << std::setw(20) << std::left << prefix << ": ";
-  return std::cout;
+std::ostream &JulietWorkflow::LogCI(const std::string &prefix)
+{
+    std::cout << std::setw(20) << std::left << prefix << ": ";
+    return std::cout;
 }
 
-void JulietWorkflow::Run(const JulietSettings &settings) {
-  using Utility::FilePrefix;
+void JulietWorkflow::Run(const JulietSettings &settings)
+{
+    using Utility::FilePrefix;
 
-  auto globalOutputPrefix = settings.OutputPrefix;
-  globalOutputPrefix += globalOutputPrefix.empty() ? "" : "/";
+    auto globalOutputPrefix = settings.OutputPrefix;
+    globalOutputPrefix += globalOutputPrefix.empty() ? "" : "/";
 
-  if (settings.Mode == AnalysisMode::BASE) {
-    std::unordered_map<std::string, JSON::Json> jsonResults;
-    for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
+    if (settings.Mode == AnalysisMode::BASE) {
+        std::unordered_map<std::string, JSON::Json> jsonResults;
+        for (const auto &inputFile : settings.InputFiles) {
+            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
-      // Convert BamRecords to unrolled ArrayReads
-      std::vector<Data::ArrayRead> reads;
-      reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+            // Convert BamRecords to unrolled ArrayReads
+            std::vector<Data::ArrayRead> reads;
+            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
 
-      Data::MSA msa(reads);
+            Data::MSA msa(reads);
 
-      // Compute fisher's exact test for each position
-      for (auto &column : msa) {
-        column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-        column.AddFisherResult(
-            Statistics::Tests::FisherCCS(column, column.insertions));
-      }
+            // Compute fisher's exact test for each position
+            for (auto &column : msa) {
+                column.AddFisherResult(Statistics::Tests::FisherCCS(column));
+                column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
+            }
 
-      if (settings.SaveMSA) {
-        // Store msa + p-values
-        std::ofstream msaStream(outputPrefix + ".msa");
-        msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
-        int pos = msa.beginPos;
-        for (auto &column : msa)
-          msaStream << ++pos << " " << column << std::endl;
-        msaStream.close();
-      }
-      ResistanceCaller resiCaller(msa);
+            if (settings.SaveMSA) {
+                // Store msa + p-values
+                std::ofstream msaStream(outputPrefix + ".msa");
+                msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
+                int pos = msa.beginPos;
+                for (auto &column : msa)
+                    msaStream << ++pos << " " << column << std::endl;
+                msaStream.close();
+            }
+            ResistanceCaller resiCaller(msa);
 
-      const auto json = resiCaller.JSON();
-      jsonResults.insert({FilePrefix(inputFile), json});
-      std::ofstream jsonStream(outputPrefix + ".json");
-      jsonStream << json.dump(2) << std::endl;
+            const auto json = resiCaller.JSON();
+            jsonResults.insert({FilePrefix(inputFile), json});
+            std::ofstream jsonStream(outputPrefix + ".json");
+            jsonStream << json.dump(2) << std::endl;
 
-      std::ofstream htmlStream(outputPrefix + ".html");
-      ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly,
-                             settings.Details);
-    }
-  } else if (settings.Mode == AnalysisMode::AMINO) {
-    for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
-
-      ErrorEstimates error;
-      if (settings.SubstitutionRate != 0.0 && settings.DeletionRate != 0.0) {
-        error =
-            ErrorEstimates(settings.SubstitutionRate, settings.DeletionRate);
-      } else {
-        std::string chemistry;
-        const BAM::BamReader bamReader(inputFile);
-        const auto readGroups = bamReader.Header().ReadGroups();
-        for (const auto &rg : readGroups) {
-          if (chemistry.empty())
-            chemistry = rg.SequencingChemistry();
-          else if (chemistry != rg.SequencingChemistry())
-            throw std::runtime_error("Mixed chemistries are not allowed");
+            std::ofstream htmlStream(outputPrefix + ".html");
+            ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
         }
-        error = ErrorEstimates(chemistry);
-      }
+    } else if (settings.Mode == AnalysisMode::AMINO) {
+        for (const auto &inputFile : settings.InputFiles) {
+            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
-      // Convert BamRecords to unrolled ArrayReads
-      std::vector<Data::ArrayRead> reads;
-      reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+            ErrorEstimates error;
+            if (settings.SubstitutionRate != 0.0 && settings.DeletionRate != 0.0) {
+                error = ErrorEstimates(settings.SubstitutionRate, settings.DeletionRate);
+            } else {
+                std::string chemistry;
+                const BAM::BamReader bamReader(inputFile);
+                const auto readGroups = bamReader.Header().ReadGroups();
+                for (const auto &rg : readGroups) {
+                    if (chemistry.empty())
+                        chemistry = rg.SequencingChemistry();
+                    else if (chemistry != rg.SequencingChemistry())
+                        throw std::runtime_error("Mixed chemistries are not allowed");
+                }
+                error = ErrorEstimates(chemistry);
+            }
 
-      // Call variants
-      AminoAcidCaller aac(reads, error, settings.TargetConfigUser);
-      const auto json = aac.JSON();
+            // Convert BamRecords to unrolled ArrayReads
+            std::vector<Data::ArrayRead> reads;
+            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
 
-      std::ofstream jsonStream(outputPrefix + ".json");
-      jsonStream << json.dump(2) << std::endl;
+            // Call variants
+            AminoAcidCaller aac(reads, error, settings.TargetConfigUser);
+            const auto json = aac.JSON();
 
-      std::ofstream htmlStream(outputPrefix + ".html");
-      AminoAcidCaller::HTML(htmlStream, json, settings.DRMOnly,
-                            settings.Details);
+            std::ofstream jsonStream(outputPrefix + ".json");
+            jsonStream << json.dump(2) << std::endl;
 
-      // Store msa + p-values
-      if (settings.SaveMSA) {
-        std::ofstream msaStream(outputPrefix + ".msa");
-        msaStream << "pos A C G T N" << std::endl;
-        int pos = aac.msa_->beginPos;
-        for (auto &column : *aac.msa_) {
-          msaStream << ++pos;
-          const std::array<int, 5> &counts = column;
-          for (const auto &c : counts)
-            msaStream << " " << c;
-          msaStream << std::endl;
+            std::ofstream htmlStream(outputPrefix + ".html");
+            AminoAcidCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
+
+            // Store msa + p-values
+            if (settings.SaveMSA) {
+                std::ofstream msaStream(outputPrefix + ".msa");
+                msaStream << "pos A C G T N" << std::endl;
+                int pos = aac.msa_->beginPos;
+                for (auto &column : *aac.msa_) {
+                    msaStream << ++pos;
+                    const std::array<int, 5> &counts = column;
+                    for (const auto &c : counts)
+                        msaStream << " " << c;
+                    msaStream << std::endl;
+                }
+                msaStream.close();
+            }
         }
-        msaStream.close();
-      }
-    }
-  } else if (settings.Mode == AnalysisMode::PHASING) {
-    for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
+    } else if (settings.Mode == AnalysisMode::PHASING) {
+        for (const auto &inputFile : settings.InputFiles) {
+            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
-      // Convert BamRecords to unrolled ArrayReads
-      std::vector<Data::ArrayRead> reads;
-      reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+            // Convert BamRecords to unrolled ArrayReads
+            std::vector<Data::ArrayRead> reads;
+            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
 
-      Data::MSA msa(reads);
+            Data::MSA msa(reads);
 
-      // Compute fisher's exact test for each position
-      for (auto &column : msa) {
-        column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-        column.AddFisherResult(
-            Statistics::Tests::FisherCCS(column, column.insertions));
-      }
+            // Compute fisher's exact test for each position
+            for (auto &column : msa) {
+                column.AddFisherResult(Statistics::Tests::FisherCCS(column));
+                column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
+            }
 
-      Data::MSA msaWithPrior(reads, msa);
-    }
-  } else if (settings.Mode == AnalysisMode::ERROR) {
-    for (const auto &inputFile : settings.InputFiles) {
-      std::vector<Data::ArrayRead> reads;
-      reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-      Data::MSA msa(reads);
-      double sub = 0;
-      double del = 0;
-      int columnCount = 0;
-      for (const auto &column : msa) {
-        if (column.Coverage() > 100) {
-          del += column.Frequency(4);
-          sub +=
-              1.0 - column.Frequency(4) - column.Frequency(column.MaxElement());
-          ++columnCount;
+            Data::MSA msaWithPrior(reads, msa);
         }
-      }
-      std::cout << inputFile << std::endl;
-      std::cout << "sub: " << (sub / columnCount) << std::endl;
-      std::cout << "del: " << (del / columnCount) << std::endl;
+    } else if (settings.Mode == AnalysisMode::ERROR) {
+        for (const auto &inputFile : settings.InputFiles) {
+            std::vector<Data::ArrayRead> reads;
+            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+            Data::MSA msa(reads);
+            double sub = 0;
+            double del = 0;
+            int columnCount = 0;
+            for (const auto &column : msa) {
+                if (column.Coverage() > 100) {
+                    del += column.Frequency(4);
+                    sub += 1.0 - column.Frequency(4) - column.Frequency(column.MaxElement());
+                    ++columnCount;
+                }
+            }
+            std::cout << inputFile << std::endl;
+            std::cout << "sub: " << (sub / columnCount) << std::endl;
+            std::cout << "del: " << (del / columnCount) << std::endl;
+        }
     }
-  }
 }
 }
-} // ::PacBio::Juliet
+}  // ::PacBio::Juliet

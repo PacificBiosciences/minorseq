@@ -44,6 +44,12 @@
 namespace PacBio {
 namespace Juliet {
 
-enum class AnalysisMode : uint8_t { AMINO = 0, BASE, PHASING, ERROR };
+enum class AnalysisMode : uint8_t
+{
+    AMINO = 0,
+    BASE,
+    PHASING,
+    ERROR
+};
 }
-} //::PacBio::Juliet
+}  //::PacBio::Juliet

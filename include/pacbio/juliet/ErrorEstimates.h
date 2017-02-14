@@ -46,23 +46,24 @@
 namespace PacBio {
 namespace Juliet {
 /// Contains CCS error estimates
-class ErrorEstimates {
+class ErrorEstimates
+{
 public:
-  ErrorEstimates() = default;
-  ErrorEstimates(const std::string &chemistry);
-  ErrorEstimates(const double substitutionRate, const double deletionRate);
+    ErrorEstimates() = default;
+    ErrorEstimates(const std::string &chemistry);
+    ErrorEstimates(const double substitutionRate, const double deletionRate);
 
-  double match = -1;
-  double substitution = -1;
-  double deletion = -1;
-  double insertion = -1;
+    double match = -1;
+    double substitution = -1;
+    double deletion = -1;
+    double insertion = -1;
 
-  friend std::ostream &operator<<(std::ostream &stream,
-                                  const ErrorEstimates &r) {
-    stream << "match:" << r.match << "\tsubstitution:" << r.substitution
-           << "\tdeletion:" << r.deletion << "\tinsertion:" << r.insertion;
-    return stream;
-  }
+    friend std::ostream &operator<<(std::ostream &stream, const ErrorEstimates &r)
+    {
+        stream << "match:" << r.match << "\tsubstitution:" << r.substitution
+               << "\tdeletion:" << r.deletion << "\tinsertion:" << r.insertion;
+        return stream;
+    }
 };
 }
-} // ::PacBio::Juliet
+}  // ::PacBio::Juliet

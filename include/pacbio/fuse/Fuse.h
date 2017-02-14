@@ -47,30 +47,27 @@
 namespace PacBio {
 namespace Fuse {
 
-class Fuse {
+class Fuse
+{
 public:
-  Fuse(const std::string &ccsInput);
-  Fuse(const std::vector<Data::ArrayRead> &arrayReads);
+    Fuse(const std::string &ccsInput);
+    Fuse(const std::vector<Data::ArrayRead> &arrayReads);
 
 public:
-  std::string ConsensusSequence() const { return consensusSequence_; }
+    std::string ConsensusSequence() const { return consensusSequence_; }
 
 private:
-  std::vector<Data::ArrayRead>
-  FetchAlignedReads(const std::string &ccsInput) const;
-  std::string
-  CreateConsensus(const std::vector<Data::ArrayRead> &arrayReads) const;
-  std::map<int, std::pair<std::string, int>>
-  CollectInsertions(const Data::MSA &msa) const;
-  std::pair<int, std::string>
-  FindInsertions(std::map<int, std::pair<std::string, int>> *posInsCov,
-                 int windowSize = 20) const;
+    std::vector<Data::ArrayRead> FetchAlignedReads(const std::string &ccsInput) const;
+    std::string CreateConsensus(const std::vector<Data::ArrayRead> &arrayReads) const;
+    std::map<int, std::pair<std::string, int>> CollectInsertions(const Data::MSA &msa) const;
+    std::pair<int, std::string> FindInsertions(
+        std::map<int, std::pair<std::string, int>> *posInsCov, int windowSize = 20) const;
 
 private:
-  static constexpr int minCoverage_ = 50;
-  static constexpr int minInsertionCoverage_ = 50;
+    static constexpr int minCoverage_ = 50;
+    static constexpr int minInsertionCoverage_ = 50;
 
-  std::string consensusSequence_;
+    std::string consensusSequence_;
 };
 }
-} // ::PacBio::Fuse
+}  // ::PacBio::Fuse

@@ -37,9 +37,9 @@
 
 #include <thread>
 
-#include <boost/algorithm/string.hpp>
 #include <pacbio/Version.h>
 #include <pacbio/data/PlainOption.h>
+#include <boost/algorithm/string.hpp>
 
 #include <pacbio/juliet/JulietSettings.h>
 #include <pacbio/juliet/TargetConfig.h>
@@ -106,75 +106,73 @@ const PlainOption TargetConfig{
     CLI::Option::StringType("")
 };
 // clang-format on
-} // namespace OptionNames
+}  // namespace OptionNames
 
 JulietSettings::JulietSettings(const PacBio::CLI::Results &options)
-    : InputFiles(options.PositionalArguments()),
-      OutputPrefix(std::forward<std::string>(options[OptionNames::Output])),
-      TargetConfigUser(
-          std::forward<std::string>(options[OptionNames::TargetConfig])),
-      DRMOnly(options[OptionNames::DRMOnly]),
-      SaveMSA(options[OptionNames::SaveMSA]),
-      Mode(AnalysisModeFromString(options[OptionNames::Mode])),
-      SubstitutionRate(options[OptionNames::SubstitutionRate]),
-      DeletionRate(options[OptionNames::DeletionRate]) {
-  SplitRegion(options[OptionNames::Region], &RegionStart, &RegionEnd);
+    : InputFiles(options.PositionalArguments())
+    , OutputPrefix(std::forward<std::string>(options[OptionNames::Output]))
+    , TargetConfigUser(std::forward<std::string>(options[OptionNames::TargetConfig]))
+    , DRMOnly(options[OptionNames::DRMOnly])
+    , SaveMSA(options[OptionNames::SaveMSA])
+    , Mode(AnalysisModeFromString(options[OptionNames::Mode]))
+    , SubstitutionRate(options[OptionNames::SubstitutionRate])
+    , DeletionRate(options[OptionNames::DeletionRate])
+{
+    SplitRegion(options[OptionNames::Region], &RegionStart, &RegionEnd);
 }
 
-size_t JulietSettings::ThreadCount(int n) {
-  const int m = std::thread::hardware_concurrency();
+size_t JulietSettings::ThreadCount(int n)
+{
+    const int m = std::thread::hardware_concurrency();
 
-  if (n < 1)
-    return std::max(1, m + n);
+    if (n < 1) return std::max(1, m + n);
 
-  return std::min(m, n);
+    return std::min(m, n);
 }
 
-void JulietSettings::SplitRegion(const std::string &region, int *start,
-                                 int *end) {
-  if (region.compare("") != 0) {
-    std::vector<std::string> splitVec;
-    boost::split(splitVec, region, boost::is_any_of("-"));
-    *start = stoi(splitVec[0]);
-    *end = stoi(splitVec[1]);
-    if (*start <= 0 || *end <= 0)
-      throw std::runtime_error("Indexing is 1-based");
-  }
+void JulietSettings::SplitRegion(const std::string &region, int *start, int *end)
+{
+    if (region.compare("") != 0) {
+        std::vector<std::string> splitVec;
+        boost::split(splitVec, region, boost::is_any_of("-"));
+        *start = stoi(splitVec[0]);
+        *end = stoi(splitVec[1]);
+        if (*start <= 0 || *end <= 0) throw std::runtime_error("Indexing is 1-based");
+    }
 }
 
-AnalysisMode JulietSettings::AnalysisModeFromString(const std::string &input) {
-  std::string s = input;
-  std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-  if (s.find("amino") != std::string::npos ||
-      s.find("acid") != std::string::npos)
-    return AnalysisMode::AMINO;
-  else if (s.find("base") != std::string::npos ||
-           s.find("nuc") != std::string::npos)
-    return AnalysisMode::BASE;
-  else if (s.find("phas") != std::string::npos ||
-           s.find("hap") != std::string::npos)
-    return AnalysisMode::PHASING;
-  else if (s.find("error") != std::string::npos)
-    return AnalysisMode::ERROR;
-  else
-    throw std::runtime_error("Unknown mode " + s);
+AnalysisMode JulietSettings::AnalysisModeFromString(const std::string &input)
+{
+    std::string s = input;
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    if (s.find("amino") != std::string::npos || s.find("acid") != std::string::npos)
+        return AnalysisMode::AMINO;
+    else if (s.find("base") != std::string::npos || s.find("nuc") != std::string::npos)
+        return AnalysisMode::BASE;
+    else if (s.find("phas") != std::string::npos || s.find("hap") != std::string::npos)
+        return AnalysisMode::PHASING;
+    else if (s.find("error") != std::string::npos)
+        return AnalysisMode::ERROR;
+    else
+        throw std::runtime_error("Unknown mode " + s);
 }
 
-PacBio::CLI::Interface JulietSettings::CreateCLI() {
-  using Option = PacBio::CLI::Option;
-  using Task = PacBio::CLI::ToolContract::Task;
+PacBio::CLI::Interface JulietSettings::CreateCLI()
+{
+    using Option = PacBio::CLI::Option;
+    using Task = PacBio::CLI::ToolContract::Task;
 
-  PacBio::CLI::Interface i{"juliet",
-                           "Juliet, minimal minor variant calling "
-                           "software.\nAttention: Juliet is for research usage "
-                           "only. Predictions have not been validated.",
-                           PacBio::MinorseqVersion() + " (commit " +
-                               PacBio::MinorseqGitSha1() + ")"};
+    PacBio::CLI::Interface i{
+        "juliet",
+        "Juliet, minimal minor variant calling "
+        "software.\nAttention: Juliet is for research usage "
+        "only. Predictions have not been validated.",
+        PacBio::MinorseqVersion() + " (commit " + PacBio::MinorseqGitSha1() + ")"};
 
-  i.AddHelpOption();    // use built-in help output
-  i.AddVersionOption(); // use built-in version output
+    i.AddHelpOption();     // use built-in help output
+    i.AddVersionOption();  // use built-in version output
 
-  // clang-format off
+    // clang-format off
     i.AddPositionalArguments({
         {"source", "Source BAM or DataSet XML file.", "FILE"}
     });
@@ -225,9 +223,9 @@ PacBio::CLI::Interface JulietSettings::CreateCLI() {
 
     CLI::ToolContract::Config tcConfig(tcTask);
     i.EnableToolContract(tcConfig);
-  // clang-format on
+    // clang-format on
 
-  return i;
+    return i;
 }
 }
-} // ::PacBio::CCS
+}  // ::PacBio::CCS

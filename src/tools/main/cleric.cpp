@@ -53,91 +53,89 @@
 namespace {
 using namespace PacBio::Cleric;
 
-static void ParseInputFiles(const std::vector<std::string> &inputs,
-                            std::string *bamPath, std::string *fromReference,
-                            std::string *fromReferenceName,
-                            std::string *toReference,
-                            std::string *toReferenceName) {
-  using namespace PacBio::BAM;
-  std::vector<std::string> fastaPaths;
-  for (const auto &i : inputs) {
-    try {
-      BamReader reader(i);
-      if (!bamPath->empty())
-        throw std::runtime_error("Only one BAM input is allowed!");
-      *bamPath = i;
-      if (reader.Header().Sequences().empty())
-        throw std::runtime_error("Could not find reference sequence name");
-      *fromReferenceName = reader.Header().Sequences().begin()->Name();
-    } catch (...) {
-      // If this is trigerred, the input file is not a BAM file.
-      fastaPaths.push_back(i);
+static void ParseInputFiles(const std::vector<std::string> &inputs, std::string *bamPath,
+                            std::string *fromReference, std::string *fromReferenceName,
+                            std::string *toReference, std::string *toReferenceName)
+{
+    using namespace PacBio::BAM;
+    std::vector<std::string> fastaPaths;
+    for (const auto &i : inputs) {
+        try {
+            BamReader reader(i);
+            if (!bamPath->empty()) throw std::runtime_error("Only one BAM input is allowed!");
+            *bamPath = i;
+            if (reader.Header().Sequences().empty())
+                throw std::runtime_error("Could not find reference sequence name");
+            *fromReferenceName = reader.Header().Sequences().begin()->Name();
+        } catch (...) {
+            // If this is trigerred, the input file is not a BAM file.
+            fastaPaths.push_back(i);
+        }
     }
-  }
 
-  for (const auto &fasta : fastaPaths) {
-    FastaReader msaReader(fasta);
+    for (const auto &fasta : fastaPaths) {
+        FastaReader msaReader(fasta);
 
-    FastaSequence f;
-    while (msaReader.GetNext(f)) {
-      if (f.Name() == *fromReferenceName) {
-        if (fromReference->empty()) {
-          *fromReference = f.Bases();
-          std::transform(fromReference->begin(), fromReference->end(),
-                         fromReference->begin(), ::toupper);
-        } else
-          throw std::runtime_error("Multiple original references provided!");
-      } else if (toReference->empty()) {
-        *toReference = f.Bases();
-        std::transform(toReference->begin(), toReference->end(),
-                       toReference->begin(), ::toupper);
-        *toReferenceName = f.Name();
-      } else {
-        throw std::runtime_error("Multiple target references provided!");
-      }
+        FastaSequence f;
+        while (msaReader.GetNext(f)) {
+            if (f.Name() == *fromReferenceName) {
+                if (fromReference->empty()) {
+                    *fromReference = f.Bases();
+                    std::transform(fromReference->begin(), fromReference->end(),
+                                   fromReference->begin(), ::toupper);
+                } else
+                    throw std::runtime_error("Multiple original references provided!");
+            } else if (toReference->empty()) {
+                *toReference = f.Bases();
+                std::transform(toReference->begin(), toReference->end(), toReference->begin(),
+                               ::toupper);
+                *toReferenceName = f.Name();
+            } else {
+                throw std::runtime_error("Multiple target references provided!");
+            }
+        }
     }
-  }
 }
 
-static int Runner(const PacBio::CLI::Results &options) {
-  // Check args size, as pbcopper does not enforce the correct number
-  if (options.PositionalArguments().empty()) {
-    std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
-    return EXIT_FAILURE;
-  }
-  if (options.PositionalArguments().size() < 2 ||
-      options.PositionalArguments().size() >= 4) {
-    std::cerr << "ERROR: Please provide _one_ BAM input and maximal _two_ "
-                 "FASTA files, see --help"
-              << std::endl;
-    return EXIT_FAILURE;
-  }
+static int Runner(const PacBio::CLI::Results &options)
+{
+    // Check args size, as pbcopper does not enforce the correct number
+    if (options.PositionalArguments().empty()) {
+        std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (options.PositionalArguments().size() < 2 || options.PositionalArguments().size() >= 4) {
+        std::cerr << "ERROR: Please provide _one_ BAM input and maximal _two_ "
+                     "FASTA files, see --help"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  // Parse options
-  ClericSettings settings(options);
+    // Parse options
+    ClericSettings settings(options);
 
-  std::string bamPath;
-  std::string fromReference;
-  std::string fromReferenceName;
-  std::string toReference;
-  std::string toReferenceName;
-  ParseInputFiles(settings.InputFiles, &bamPath, &fromReference,
-                  &fromReferenceName, &toReference, &toReferenceName);
+    std::string bamPath;
+    std::string fromReference;
+    std::string fromReferenceName;
+    std::string toReference;
+    std::string toReferenceName;
+    ParseInputFiles(settings.InputFiles, &bamPath, &fromReference, &fromReferenceName, &toReference,
+                    &toReferenceName);
 
-  std::string output;
-  if (settings.OutputPrefix.empty())
-    output = PacBio::Utility::FilePrefix(bamPath) + "_cleric.bam";
-  else
-    output = settings.OutputPrefix + ".bam";
+    std::string output;
+    if (settings.OutputPrefix.empty())
+        output = PacBio::Utility::FilePrefix(bamPath) + "_cleric.bam";
+    else
+        output = settings.OutputPrefix + ".bam";
 
-  Cleric cleric(bamPath, output, fromReference, fromReferenceName, toReference,
-                toReferenceName);
+    Cleric cleric(bamPath, output, fromReference, fromReferenceName, toReference, toReferenceName);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 };
 
 // Entry point
-int main(int argc, char *argv[]) {
-  return PacBio::CLI::Run(argc, argv, ClericSettings::CreateCLI(), &Runner);
+int main(int argc, char *argv[])
+{
+    return PacBio::CLI::Run(argc, argv, ClericSettings::CreateCLI(), &Runner);
 }

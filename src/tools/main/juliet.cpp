@@ -48,23 +48,25 @@
 namespace {
 using namespace PacBio::Juliet;
 
-static int Runner(const PacBio::CLI::Results &options) {
-  // Check args size, as pbcopper does not enforce the correct number
-  if (options.PositionalArguments().empty()) {
-    std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
-    return EXIT_FAILURE;
-  }
+static int Runner(const PacBio::CLI::Results &options)
+{
+    // Check args size, as pbcopper does not enforce the correct number
+    if (options.PositionalArguments().empty()) {
+        std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  // Parse options
-  JulietSettings settings(options);
-  JulietWorkflow workflow;
-  workflow.Run(settings);
+    // Parse options
+    JulietSettings settings(options);
+    JulietWorkflow workflow;
+    workflow.Run(settings);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 };
 
 // Entry point
-int main(int argc, char *argv[]) {
-  return PacBio::CLI::Run(argc, argv, JulietSettings::CreateCLI(), &Runner);
+int main(int argc, char *argv[])
+{
+    return PacBio::CLI::Run(argc, argv, JulietSettings::CreateCLI(), &Runner);
 }

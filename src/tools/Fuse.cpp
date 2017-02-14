@@ -59,98 +59,94 @@
 namespace PacBio {
 namespace Fuse {
 
-Fuse::Fuse(const std::string &ccsInput) {
-  const auto arrayReads = FetchAlignedReads(ccsInput);
-  consensusSequence_ = CreateConsensus(arrayReads);
+Fuse::Fuse(const std::string &ccsInput)
+{
+    const auto arrayReads = FetchAlignedReads(ccsInput);
+    consensusSequence_ = CreateConsensus(arrayReads);
 }
-Fuse::Fuse(const std::vector<Data::ArrayRead> &arrayReads) {
-  consensusSequence_ = CreateConsensus(arrayReads);
-}
-
-std::string
-Fuse::CreateConsensus(const std::vector<Data::ArrayRead> &arrayReads) const {
-  Data::MSA msa(arrayReads);
-
-  auto posInsCov = CollectInsertions(msa);
-  std::map<int, std::string> posIns;
-  while (!posInsCov.empty())
-    posIns.insert(FindInsertions(&posInsCov));
-
-  std::string consensus;
-  for (const auto &c : msa.counts) {
-    if (posIns.find(c.refPos) != posIns.cend())
-      consensus += posIns[c.refPos];
-    if (c.Coverage() > minCoverage_) {
-      const auto maxBase = c.MaxBase();
-      if (maxBase != '-')
-        consensus += c.MaxBase();
-    }
-  }
-  return consensus;
+Fuse::Fuse(const std::vector<Data::ArrayRead> &arrayReads)
+{
+    consensusSequence_ = CreateConsensus(arrayReads);
 }
 
-std::map<int, std::pair<std::string, int>>
-Fuse::CollectInsertions(const Data::MSA &msa) const {
-  std::map<int, std::pair<std::string, int>> posInsCov;
-  for (const auto &c : msa) {
-    if (!c.insertions.empty()) {
-      int argmax = -1;
-      std::string max;
-      for (const auto &ins_count : c.insertions) {
-        if (ins_count.first.size() % 3 != 0)
-          continue;
-        if (ins_count.second > argmax &&
-            ins_count.second > minInsertionCoverage_) {
-          argmax = ins_count.second;
-          max = ins_count.first;
+std::string Fuse::CreateConsensus(const std::vector<Data::ArrayRead> &arrayReads) const
+{
+    Data::MSA msa(arrayReads);
+
+    auto posInsCov = CollectInsertions(msa);
+    std::map<int, std::string> posIns;
+    while (!posInsCov.empty())
+        posIns.insert(FindInsertions(&posInsCov));
+
+    std::string consensus;
+    for (const auto &c : msa.counts) {
+        if (posIns.find(c.refPos) != posIns.cend()) consensus += posIns[c.refPos];
+        if (c.Coverage() > minCoverage_) {
+            const auto maxBase = c.MaxBase();
+            if (maxBase != '-') consensus += c.MaxBase();
         }
-      }
-      if (argmax != -1)
-        posInsCov[c.refPos] = std::make_pair(max, argmax);
     }
-  }
-  return posInsCov;
+    return consensus;
 }
 
-std::pair<int, std::string>
-Fuse::FindInsertions(std::map<int, std::pair<std::string, int>> *posInsCov,
-                     int windowSize) const {
-  int argMax = -1;
-  int maxCov = -1;
-  std::string ins;
-  for (const auto &kv : *posInsCov) {
-    if (kv.second.second > maxCov) {
-      maxCov = kv.second.second;
-      argMax = kv.first;
-      ins = kv.second.first;
+std::map<int, std::pair<std::string, int>> Fuse::CollectInsertions(const Data::MSA &msa) const
+{
+    std::map<int, std::pair<std::string, int>> posInsCov;
+    for (const auto &c : msa) {
+        if (!c.insertions.empty()) {
+            int argmax = -1;
+            std::string max;
+            for (const auto &ins_count : c.insertions) {
+                if (ins_count.first.size() % 3 != 0) continue;
+                if (ins_count.second > argmax && ins_count.second > minInsertionCoverage_) {
+                    argmax = ins_count.second;
+                    max = ins_count.first;
+                }
+            }
+            if (argmax != -1) posInsCov[c.refPos] = std::make_pair(max, argmax);
+        }
     }
-  }
-
-  for (int i = std::max(0, argMax - windowSize); i < argMax + windowSize; ++i) {
-    auto it = posInsCov->find(i);
-    if (it != posInsCov->cend())
-      posInsCov->erase(it);
-  }
-  return std::make_pair(argMax, ins);
+    return posInsCov;
 }
 
-std::vector<Data::ArrayRead>
-Fuse::FetchAlignedReads(const std::string &ccsInput) const {
-  BAM::DataSet ds(ccsInput);
-  const auto filter = BAM::PbiFilter::FromDataSet(ds);
-  std::unique_ptr<BAM::internal::IQuery> query(nullptr);
-  if (filter.IsEmpty())
-    query.reset(new BAM::EntireFileQuery(ds));
-  else
-    query.reset(new BAM::PbiFilterQuery(filter, ds));
+std::pair<int, std::string> Fuse::FindInsertions(
+    std::map<int, std::pair<std::string, int>> *posInsCov, int windowSize) const
+{
+    int argMax = -1;
+    int maxCov = -1;
+    std::string ins;
+    for (const auto &kv : *posInsCov) {
+        if (kv.second.second > maxCov) {
+            maxCov = kv.second.second;
+            argMax = kv.first;
+            ins = kv.second.first;
+        }
+    }
 
-  std::vector<Data::ArrayRead> reads;
-  int idx = 0;
-  for (const auto &read : *query) {
-    reads.emplace_back(Data::BAMArrayRead(read, idx++));
-  }
+    for (int i = std::max(0, argMax - windowSize); i < argMax + windowSize; ++i) {
+        auto it = posInsCov->find(i);
+        if (it != posInsCov->cend()) posInsCov->erase(it);
+    }
+    return std::make_pair(argMax, ins);
+}
 
-  return reads;
+std::vector<Data::ArrayRead> Fuse::FetchAlignedReads(const std::string &ccsInput) const
+{
+    BAM::DataSet ds(ccsInput);
+    const auto filter = BAM::PbiFilter::FromDataSet(ds);
+    std::unique_ptr<BAM::internal::IQuery> query(nullptr);
+    if (filter.IsEmpty())
+        query.reset(new BAM::EntireFileQuery(ds));
+    else
+        query.reset(new BAM::PbiFilterQuery(filter, ds));
+
+    std::vector<Data::ArrayRead> reads;
+    int idx = 0;
+    for (const auto &read : *query) {
+        reads.emplace_back(Data::BAMArrayRead(read, idx++));
+    }
+
+    return reads;
 }
 }
-} // ::PacBio::Realign
+}  // ::PacBio::Realign

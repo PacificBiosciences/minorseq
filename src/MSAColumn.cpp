@@ -44,29 +44,27 @@
 
 namespace PacBio {
 namespace Data {
-int MSAColumn::Coverage() const {
-  return std::accumulate(counts.cbegin(), counts.cend(), 0);
+int MSAColumn::Coverage() const { return std::accumulate(counts.cbegin(), counts.cend(), 0); }
+int MSAColumn::MaxElement() const
+{
+    return std::distance(counts.begin(), std::max_element(counts.begin(), counts.end()));
 }
-int MSAColumn::MaxElement() const {
-  return std::distance(counts.begin(),
-                       std::max_element(counts.begin(), counts.end()));
-}
-char MSAColumn::MaxBase() const {
-  static const char bases[]{'A', 'C', 'G', 'T', '-'};
-  return bases[MaxElement()];
+char MSAColumn::MaxBase() const
+{
+    static const char bases[]{'A', 'C', 'G', 'T', '-'};
+    return bases[MaxElement()];
 }
 int MSAColumn::Max() const { return counts.at(MaxElement()); }
 
-void MSAColumn::AddFisherResult(const FisherResult &f) {
-  pValues = f.pValues;
-  mask = f.mask;
-  hit = f.hit;
-  argMax = f.argMax;
+void MSAColumn::AddFisherResult(const FisherResult &f)
+{
+    pValues = f.pValues;
+    mask = f.mask;
+    hit = f.hit;
+    argMax = f.argMax;
 }
 
-void MSAColumn::AddFisherResult(const std::map<std::string, double> &f) {
-  insertionsPValues = f;
-}
+void MSAColumn::AddFisherResult(const std::map<std::string, double> &f) { insertionsPValues = f; }
 
-} // namespace Data
-} // namespace PacBio
+}  // namespace Data
+}  // namespace PacBio

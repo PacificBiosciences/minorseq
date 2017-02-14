@@ -54,69 +54,69 @@
 #include <pacbio/data/MSA.h>
 #include <pbcopper/json/JSON.h>
 
-#undef major // gcc hack
+#undef major  // gcc hack
 namespace PacBio {
 namespace Juliet {
 
-struct VariantNucleotide {
-  VariantNucleotide(char nucleotide)
-      : frequency(1), pValue(0), nucleotide(nucleotide), major(1) {}
-  VariantNucleotide(char nucleotide, double frequency, double pValue)
-      : frequency(frequency), pValue(pValue), nucleotide(nucleotide), major(0) {
-  }
-  double frequency;
-  double pValue;
-  char nucleotide;
-  bool major;
+struct VariantNucleotide
+{
+    VariantNucleotide(char nucleotide) : frequency(1), pValue(0), nucleotide(nucleotide), major(1)
+    {
+    }
+    VariantNucleotide(char nucleotide, double frequency, double pValue)
+        : frequency(frequency), pValue(pValue), nucleotide(nucleotide), major(0)
+    {
+    }
+    double frequency;
+    double pValue;
+    char nucleotide;
+    bool major;
 };
 
 /// Given a MSA and p-values for each nucleotide of each position,
 /// generate machine-interpretable and human-readable output about mutated
 /// amino acids.
-class ResistanceCaller {
+class ResistanceCaller
+{
 public:
-  /// Constructor needs a multiple sequence alignment.
-  ResistanceCaller(const Data::MSA &msa);
+    /// Constructor needs a multiple sequence alignment.
+    ResistanceCaller(const Data::MSA &msa);
 
 public:
-  /// Generate JSON output of variant amino acids
-  JSON::Json JSON();
+    /// Generate JSON output of variant amino acids
+    JSON::Json JSON();
 
 public:
-  /// Generate pretty print output of variant amino acids
-  static void Print(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs,
-                    bool details);
+    /// Generate pretty print output of variant amino acids
+    static void Print(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
 
-  /// Generate HTML output of variant amino acids
-  static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs,
-                   bool details);
+    /// Generate HTML output of variant amino acids
+    static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
 
 private:
-  double MaxFrequency(std::vector<VariantNucleotide> codon);
+    double MaxFrequency(std::vector<VariantNucleotide> codon);
 
-  void AddPosition(std::vector<VariantNucleotide> &&nucs);
+    void AddPosition(std::vector<VariantNucleotide> &&nucs);
 
-  inline char Ref(int i) const { return ref_[i]; }
+    inline char Ref(int i) const { return ref_[i]; }
 
-  std::string CodonRef(int hxb2Position) const;
+    std::string CodonRef(int hxb2Position) const;
 
-  char AminoacidRef(int hxb2Position) const;
+    char AminoacidRef(int hxb2Position) const;
 
-  inline std::string
-  CodonString(const std::vector<VariantNucleotide> &codon) const;
+    inline std::string CodonString(const std::vector<VariantNucleotide> &codon) const;
 
-  std::vector<std::vector<VariantNucleotide>>
-  CreateCodons(const int hxb2Position) const;
+    std::vector<std::vector<VariantNucleotide>> CreateCodons(const int hxb2Position) const;
 
 private:
-  Data::MSA msa_;
-  std::vector<std::vector<VariantNucleotide>> nucleotides_;
-  int begin_;
-  int end_;
+    Data::MSA msa_;
+    std::vector<std::vector<VariantNucleotide>> nucleotides_;
+    int begin_;
+    int end_;
 
-  static const std::unordered_map<int, std::string> resistantCodon_;
-  static const std::unordered_map<std::string, char> codonToAmino_;
-  static const std::string ref_;
+    static const std::unordered_map<int, std::string> resistantCodon_;
+    static const std::unordered_map<std::string, char> codonToAmino_;
+    static const std::string ref_;
 };
 }
-} // ::PacBio::Juliet
+}  // ::PacBio::Juliet

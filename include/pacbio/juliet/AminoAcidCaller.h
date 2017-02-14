@@ -59,123 +59,121 @@
 namespace PacBio {
 namespace Juliet {
 namespace {
-struct VariantGene {
-  std::string geneName;
+struct VariantGene
+{
+    std::string geneName;
 
-  struct VariantPosition {
-    std::string refCodon;
-    char refAminoAcid;
-    std::vector<JSON::Json> msa;
-    int coverage;
+    struct VariantPosition
+    {
+        std::string refCodon;
+        char refAminoAcid;
+        std::vector<JSON::Json> msa;
+        int coverage;
 
-    struct VariantCodon {
-      std::string codon;
-      double frequency;
-      double pValue;
-      std::string knownDRM;
+        struct VariantCodon
+        {
+            std::string codon;
+            double frequency;
+            double pValue;
+            std::string knownDRM;
+        };
+        std::map<char, std::vector<VariantCodon>> aminoAcidToCodons;
     };
-    std::map<char, std::vector<VariantCodon>> aminoAcidToCodons;
-  };
 
-  std::map<int, VariantPosition> relPositionToVariant;
+    std::map<int, VariantPosition> relPositionToVariant;
 
-  JSON::Json ToJson() const {
-    using namespace JSON;
-    Json root;
-    root["name"] = geneName;
-    std::vector<Json> positions;
-    for (const auto &pos_variant : relPositionToVariant) {
-      Json jVarPos;
-      jVarPos["ref_position"] = pos_variant.first;
-      jVarPos["ref_codon"] = pos_variant.second.refCodon;
-      jVarPos["coverage"] = pos_variant.second.coverage;
-      jVarPos["ref_amino_acid"] =
-          std::string(1, pos_variant.second.refAminoAcid);
+    JSON::Json ToJson() const
+    {
+        using namespace JSON;
+        Json root;
+        root["name"] = geneName;
+        std::vector<Json> positions;
+        for (const auto &pos_variant : relPositionToVariant) {
+            Json jVarPos;
+            jVarPos["ref_position"] = pos_variant.first;
+            jVarPos["ref_codon"] = pos_variant.second.refCodon;
+            jVarPos["coverage"] = pos_variant.second.coverage;
+            jVarPos["ref_amino_acid"] = std::string(1, pos_variant.second.refAminoAcid);
 
-      if (pos_variant.second.aminoAcidToCodons.empty())
-        continue;
-      std::vector<Json> jVarAAs;
-      for (const auto &aa_varCodon : pos_variant.second.aminoAcidToCodons) {
-        Json jVarAA;
-        jVarAA["amino_acid"] = std::string(1, aa_varCodon.first);
-        std::vector<Json> jCodons;
+            if (pos_variant.second.aminoAcidToCodons.empty()) continue;
+            std::vector<Json> jVarAAs;
+            for (const auto &aa_varCodon : pos_variant.second.aminoAcidToCodons) {
+                Json jVarAA;
+                jVarAA["amino_acid"] = std::string(1, aa_varCodon.first);
+                std::vector<Json> jCodons;
 
-        if (aa_varCodon.second.empty())
-          continue;
-        for (const auto &codon : aa_varCodon.second) {
-          Json jCodon;
-          jCodon["codon"] = codon.codon;
-          jCodon["frequency"] = codon.frequency;
-          jCodon["pValue"] = codon.pValue;
-          jCodon["known_drm"] = codon.knownDRM;
-          jCodons.push_back(jCodon);
+                if (aa_varCodon.second.empty()) continue;
+                for (const auto &codon : aa_varCodon.second) {
+                    Json jCodon;
+                    jCodon["codon"] = codon.codon;
+                    jCodon["frequency"] = codon.frequency;
+                    jCodon["pValue"] = codon.pValue;
+                    jCodon["known_drm"] = codon.knownDRM;
+                    jCodons.push_back(jCodon);
+                }
+                jVarAA["variant_codons"] = jCodons;
+                jVarAAs.push_back(jVarAA);
+            }
+            jVarPos["variant_amino_acids"] = jVarAAs;
+            jVarPos["msa"] = pos_variant.second.msa;
+            positions.push_back(jVarPos);
         }
-        jVarAA["variant_codons"] = jCodons;
-        jVarAAs.push_back(jVarAA);
-      }
-      jVarPos["variant_amino_acids"] = jVarAAs;
-      jVarPos["msa"] = pos_variant.second.msa;
-      positions.push_back(jVarPos);
+        if (!positions.empty()) root["variant_positions"] = positions;
+        return root;
     }
-    if (!positions.empty())
-      root["variant_positions"] = positions;
-    return root;
-  }
 };
 }
 
 /// Given a MSA and p-values for each nucleotide of each position,
 /// generate machine-interpretable and human-readable output about mutated
 /// amino acids.
-class AminoAcidCaller {
+class AminoAcidCaller
+{
 public:
-  AminoAcidCaller(const std::vector<Data::ArrayRead> &reads,
-                  const ErrorEstimates &error,
-                  const TargetConfig &targetConfig);
+    AminoAcidCaller(const std::vector<Data::ArrayRead> &reads, const ErrorEstimates &error,
+                    const TargetConfig &targetConfig);
 
 public:
-  /// Generate JSON output of variant amino acids
-  JSON::Json JSON();
+    /// Generate JSON output of variant amino acids
+    JSON::Json JSON();
 
 public:
-  /// Generate HTML output of variant amino acids
-  static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs,
-                   bool details);
+    /// Generate HTML output of variant amino acids
+    static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
 
 public:
-  std::unique_ptr<Data::MSA> msa_;
+    std::unique_ptr<Data::MSA> msa_;
 
 private:
-  static constexpr float alpha = 0.01;
-  void GenerateMSA(const std::vector<Data::ArrayRead> &reads);
-  void CallVariants(const std::vector<Data::ArrayRead> &reads);
-  int CountNumberOfTests(const std::vector<TargetGene> &genes) const;
-  std::string FindDRMs(const std::string &geneName,
-                       const std::vector<TargetGene> &genes,
-                       const int position) const;
+    static constexpr float alpha = 0.01;
+    void GenerateMSA(const std::vector<Data::ArrayRead> &reads);
+    void CallVariants(const std::vector<Data::ArrayRead> &reads);
+    int CountNumberOfTests(const std::vector<TargetGene> &genes) const;
+    std::string FindDRMs(const std::string &geneName, const std::vector<TargetGene> &genes,
+                         const int position) const;
 
 private:
-  int beginPos_ = std::numeric_limits<int>::max();
-  int endPos_ = 0;
-  std::vector<std::vector<char>> matrix_;
-  std::vector<VariantGene> variantGenes_;
-  const ErrorEstimates error_;
-  const TargetConfig targetConfig_;
+    int beginPos_ = std::numeric_limits<int>::max();
+    int endPos_ = 0;
+    std::vector<std::vector<char>> matrix_;
+    std::vector<VariantGene> variantGenes_;
+    const ErrorEstimates error_;
+    const TargetConfig targetConfig_;
 
-  boost::optional<uint8_t> delQv_;
-  boost::optional<uint8_t> subQv_;
-  boost::optional<uint8_t> insQv_;
-  boost::optional<uint8_t> qualQv_;
+    boost::optional<uint8_t> delQv_;
+    boost::optional<uint8_t> subQv_;
+    boost::optional<uint8_t> insQv_;
+    boost::optional<uint8_t> qualQv_;
 
-  static const std::unordered_map<std::string, char> codonToAmino_;
+    static const std::unordered_map<std::string, char> codonToAmino_;
 
-  static const std::vector<int> nnrti;
-  static const std::vector<int> nnrtiSurveillance;
-  static const std::vector<int> nrti;
-  static const std::vector<int> nrtiSurveillance;
-  static const std::vector<int> pi;
-  static const std::vector<int> piSurveillance;
-  static const std::vector<int> ini;
+    static const std::vector<int> nnrti;
+    static const std::vector<int> nnrtiSurveillance;
+    static const std::vector<int> nrti;
+    static const std::vector<int> nrtiSurveillance;
+    static const std::vector<int> pi;
+    static const std::vector<int> piSurveillance;
+    static const std::vector<int> ini;
 };
 }
-} // ::PacBio::Juliet
+}  // ::PacBio::Juliet

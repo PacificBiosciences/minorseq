@@ -42,24 +42,24 @@
 
 namespace PacBio {
 namespace Statistics {
-class Tests {
+class Tests
+{
 public:
-  /// Compute Fisher's exact test for CCS substitutions and deletions
-  static std::map<std::string, double>
-  FisherCCS(const std::array<int, 5> &observed,
-            const std::map<std::string, int> insertions);
+    /// Compute Fisher's exact test for CCS substitutions and deletions
+    static std::map<std::string, double> FisherCCS(const std::array<int, 5> &observed,
+                                                   const std::map<std::string, int> insertions);
 
-  /// Compute Fisher's exact test for CCS substitutions and deletions
-  static Data::FisherResult FisherCCS(const std::array<int, 5> &observed);
-
-private:
-  static constexpr float alpha = 0.01;
+    /// Compute Fisher's exact test for CCS substitutions and deletions
+    static Data::FisherResult FisherCCS(const std::array<int, 5> &observed);
 
 private:
-  static std::array<double, 5> CalculatePml(const std::array<int, 5> &observed,
-                                            int *argMax, double *sum);
+    static constexpr float alpha = 0.01;
 
-  static std::array<double, 5> CalculatePriors(const int argMax);
+private:
+    static std::array<double, 5> CalculatePml(const std::array<int, 5> &observed, int *argMax,
+                                              double *sum);
+
+    static std::array<double, 5> CalculatePriors(const int argMax);
 };
 }
-} // ::PacBio::Statistics
+}  // ::PacBio::Statistics

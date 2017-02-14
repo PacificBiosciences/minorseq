@@ -43,26 +43,27 @@
 
 namespace PacBio {
 namespace Data {
-struct PlainOption {
-  std::string id;
-  std::vector<std::string> cliOptions;
-  std::string name;
-  std::string description;
-  JSON::Json defaultValue;
+struct PlainOption
+{
+    std::string id;
+    std::vector<std::string> cliOptions;
+    std::string name;
+    std::string description;
+    JSON::Json defaultValue;
 
-  PlainOption(std::string id, std::vector<std::string> cliOptions,
-              std::string name, std::string description,
-              JSON::Json defaultValue)
-      : id(id), cliOptions(cliOptions), name(name), description(description),
-        defaultValue(defaultValue) {}
+    PlainOption(std::string id, std::vector<std::string> cliOptions, std::string name,
+                std::string description, JSON::Json defaultValue)
+        : id(id)
+        , cliOptions(cliOptions)
+        , name(name)
+        , description(description)
+        , defaultValue(defaultValue)
+    {
+    }
 
-  operator CLI::Option() const {
-    return {id, cliOptions, description, defaultValue};
-  }
-  operator std::pair<std::string, std::string>() const {
-    return std::make_pair(id, name);
-  }
-  operator std::string() const { return id; }
+    operator CLI::Option() const { return {id, cliOptions, description, defaultValue}; }
+    operator std::pair<std::string, std::string>() const { return std::make_pair(id, name); }
+    operator std::string() const { return id; }
 };
 }
-} // :: PacBio::CLI
+}  // :: PacBio::CLI

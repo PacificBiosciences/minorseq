@@ -44,48 +44,51 @@
 
 namespace PacBio {
 namespace Juliet {
-class DRM {
+class DRM
+{
 public:
-  std::string name;
-  std::vector<int> positions;
+    std::string name;
+    std::vector<int> positions;
 
 public:
-  JSON::Json ToJson() const;
+    JSON::Json ToJson() const;
 };
 
-class TargetGene {
+class TargetGene
+{
 public:
-  TargetGene(const int begin, const int end, const std::string &name,
-             const std::vector<DRM> &drms);
-  TargetGene() = default;
+    TargetGene(const int begin, const int end, const std::string &name,
+               const std::vector<DRM> &drms);
+    TargetGene() = default;
 
 public:
-  int begin;
-  int end;
-  std::string name;
-  std::vector<DRM> drms;
+    int begin;
+    int end;
+    std::string name;
+    std::vector<DRM> drms;
 
 public:
-  JSON::Json ToJson() const;
-  static JSON::Json ToJson(const std::vector<TargetGene> &genes);
+    JSON::Json ToJson() const;
+    static JSON::Json ToJson(const std::vector<TargetGene> &genes);
 };
 
-class TargetConfig {
+class TargetConfig
+{
 public:
-  TargetConfig() = default;
-  TargetConfig(const std::string &input);
+    TargetConfig() = default;
+    TargetConfig(const std::string &input);
 
 public:
-  std::vector<TargetGene> targetGenes;
-  std::string referenceSequence;
+    std::vector<TargetGene> targetGenes;
+    std::string referenceSequence;
 
 private:
-  static std::string DetermineConfigInput(const std::string &input);
-  static std::string ReferenceSequenceFromJson(const JSON::Json &root);
-  static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json &root);
+    static std::string DetermineConfigInput(const std::string &input);
+    static std::string ReferenceSequenceFromJson(const JSON::Json &root);
+    static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json &root);
 
 private:
-  static std::unordered_map<std::string, std::string> predefinedConfigs_;
+    static std::unordered_map<std::string, std::string> predefinedConfigs_;
 };
 }
-} //::PacBio::Juliet
+}  //::PacBio::Juliet

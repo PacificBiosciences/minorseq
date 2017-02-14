@@ -54,91 +54,90 @@ namespace Data {
 ArrayRead::ArrayRead(int idx) : Idx(idx){};
 
 BAMArrayRead::BAMArrayRead(const BAM::BamRecord &record, int idx)
-    : ArrayRead(idx),
-      Record(record) // Record(std::forward<BAM::BamRecord>(record))
+    : ArrayRead(idx), Record(record)  // Record(std::forward<BAM::BamRecord>(record))
 {
-  ArrayRead::referenceStart_ = record.ReferenceStart();
-  ArrayRead::referenceEnd_ = record.ReferenceEnd();
-  const auto seq = Record.Sequence(BAM::Orientation::GENOMIC, true, true);
+    ArrayRead::referenceStart_ = record.ReferenceStart();
+    ArrayRead::referenceEnd_ = record.ReferenceEnd();
+    const auto seq = Record.Sequence(BAM::Orientation::GENOMIC, true, true);
 
-  // bool hasQualities = Record.HasQualities();
-  bool hasQualities = !Record.Qualities().empty();
-  BAM::QualityValues qual;
-  if (hasQualities)
-    qual = Record.Qualities(BAM::Orientation::GENOMIC, true, true);
+    // bool hasQualities = Record.HasQualities();
+    bool hasQualities = !Record.Qualities().empty();
+    BAM::QualityValues qual;
+    if (hasQualities) qual = Record.Qualities(BAM::Orientation::GENOMIC, true, true);
 
-  std::string cigar;
-  cigar.reserve(seq.size());
-  for (const auto c : Record.CigarData(true))
-    for (size_t i = 0; i < c.Length(); ++i)
-      cigar += c.Char();
+    std::string cigar;
+    cigar.reserve(seq.size());
+    for (const auto c : Record.CigarData(true))
+        for (size_t i = 0; i < c.Length(); ++i)
+            cigar += c.Char();
 
-  BAM::QualityValues subQV;
-  BAM::QualityValues delQV;
-  BAM::QualityValues insQV;
+    BAM::QualityValues subQV;
+    BAM::QualityValues delQV;
+    BAM::QualityValues insQV;
 
-  bool richQVs = Record.HasSubstitutionQV() && Record.HasDeletionQV() &&
-                 Record.HasInsertionQV();
-  if (richQVs) {
-    subQV = Record.SubstitutionQV(BAM::Orientation::GENOMIC, true, true);
-    delQV = Record.DeletionQV(BAM::Orientation::GENOMIC, true, true);
-    insQV = Record.InsertionQV(BAM::Orientation::GENOMIC, true, true);
-  }
+    bool richQVs = Record.HasSubstitutionQV() && Record.HasDeletionQV() && Record.HasInsertionQV();
+    if (richQVs) {
+        subQV = Record.SubstitutionQV(BAM::Orientation::GENOMIC, true, true);
+        delQV = Record.DeletionQV(BAM::Orientation::GENOMIC, true, true);
+        insQV = Record.InsertionQV(BAM::Orientation::GENOMIC, true, true);
+    }
 
-  assert(cigar.size() == seq.size());
+    assert(cigar.size() == seq.size());
 
-  if (hasQualities) {
-    assert(seq.size() == qual.size());
-  }
+    if (hasQualities) {
+        assert(seq.size() == qual.size());
+    }
 
-  Bases.reserve(cigar.length());
-  if (richQVs)
-    for (size_t i = 0; i < cigar.length(); ++i)
-      Bases.emplace_back(cigar.at(i), seq.at(i), qual.at(i), subQV.at(i),
-                         delQV.at(i), insQV.at(i));
-  else if (hasQualities)
-    for (size_t i = 0; i < cigar.length(); ++i)
-      Bases.emplace_back(cigar.at(i), seq.at(i), qual.at(i));
-  else
-    for (size_t i = 0; i < cigar.length(); ++i)
-      Bases.emplace_back(cigar.at(i), seq.at(i), 0);
+    Bases.reserve(cigar.length());
+    if (richQVs)
+        for (size_t i = 0; i < cigar.length(); ++i)
+            Bases.emplace_back(cigar.at(i), seq.at(i), qual.at(i), subQV.at(i), delQV.at(i),
+                               insQV.at(i));
+    else if (hasQualities)
+        for (size_t i = 0; i < cigar.length(); ++i)
+            Bases.emplace_back(cigar.at(i), seq.at(i), qual.at(i));
+    else
+        for (size_t i = 0; i < cigar.length(); ++i)
+            Bases.emplace_back(cigar.at(i), seq.at(i), 0);
 }
 
-#if __cplusplus < 201402L // C++11
-char TagToNucleotide(uint8_t t) {
-  switch (t) {
-  case 0:
-    return 'A';
-  case 1:
-    return 'C';
-  case 2:
-    return 'G';
-  case 3:
-    return 'T';
-  case 4:
-    return '-';
-  default:
-    throw std::runtime_error("Unsupported tag: " + std::to_string(t));
-  }
+#if __cplusplus < 201402L  // C++11
+char TagToNucleotide(uint8_t t)
+{
+    switch (t) {
+        case 0:
+            return 'A';
+        case 1:
+            return 'C';
+        case 2:
+            return 'G';
+        case 3:
+            return 'T';
+        case 4:
+            return '-';
+        default:
+            throw std::runtime_error("Unsupported tag: " + std::to_string(t));
+    }
 }
 
-uint8_t NucleotideToTag(char t) {
-  switch (t) {
-  case 'A':
-    return 0;
-  case 'C':
-    return 1;
-  case 'G':
-    return 2;
-  case 'T':
-    return 3;
-  case '-':
-  case 'N':
-    return 4;
-  default:
-    throw std::runtime_error("Unsupported character: " + std::to_string(t));
-  }
+uint8_t NucleotideToTag(char t)
+{
+    switch (t) {
+        case 'A':
+            return 0;
+        case 'C':
+            return 1;
+        case 'G':
+            return 2;
+        case 'T':
+            return 3;
+        case '-':
+        case 'N':
+            return 4;
+        default:
+            throw std::runtime_error("Unsupported character: " + std::to_string(t));
+    }
 }
 #endif
-} // namespace Data
-} // namespace PacBio
+}  // namespace Data
+}  // namespace PacBio
