@@ -1,5 +1,9 @@
 enable_testing()
 
+# global properties
+GET_PROPERTY(LOCAL_COMPILE_FLAGS GLOBAL PROPERTY MINORSEQ_COMPILE_FLAGS_GLOBAL)
+GET_PROPERTY(LOCAL_LINK_FLAGS GLOBAL PROPERTY MINORSEQ_LINK_FLAGS_GLOBAL)
+
 if (EXTENSIVE_TESTING)
     add_definitions(-DEXTENSIVE_TESTING=1)
 endif()
@@ -43,6 +47,11 @@ target_link_libraries(test_minorseq
     ${CMAKE_DL_LIBS}
     ${ZLIB_LIBRARIES}
 )
+
+set_target_properties(test_minorseq PROPERTIES COMPILE_FLAGS ${LOCAL_COMPILE_FLAGS})
+if (LOCAL_LINK_FLAGS)
+    set_target_properties(test_minorseq PROPERTIES LINK_FLAGS ${LOCAL_LINK_FLAGS})
+endif()
 
 if(${ROOT_PROJECT_NAME} STREQUAL "MINORSEQ")
     add_custom_target(check
