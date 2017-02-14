@@ -22,26 +22,26 @@ endif()
 
 # Coverage settings
 if (MS_inc_coverage)
-    set(MS_COV_FLAGS "${MS_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(MS_FLAGS "${MS_FLAGS} -fprofile-arcs -ftest-coverage")
 endif()
 
 # Extra testing that will lead to longer compilation times!
 if (SANITIZE)
     # AddressSanitizer is a fast memory error detector
-    set(MS_SANITY_FLAGS "${MS_SANITY_FLAGS} -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+    set(MS_FLAGS "${MS_FLAGS} -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
     # Clang Thread Safety Analysis is a C++ language extension which warns about
     # potential race conditions in code.
-    set(MS_SANITY_FLAGS "${MS_SANITY_FLAGS} -Wthread-safety")
+    set(MS_FLAGS "${MS_FLAGS} -Wthread-safety")
 
     # ThreadSanitizer is a tool that detects data races
-    set(MS_SANITY_FLAGS "${MS_SANITY_FLAGS} -fsanitize=thread")
+    set(MS_FLAGS "${MS_FLAGS} -fsanitize=thread")
 
     # MemorySanitizer is a detector of uninitialized reads.
-    set(MS_SANITY_FLAGS "${MS_SANITY_FLAGS} -fsanitize=memory")
+    set(MS_FLAGS "${MS_FLAGS} -fsanitize=memory")
 
     # UndefinedBehaviorSanitizer is a fast undefined behavior detector.
-    set(MS_SANITY_FLAGS "${MS_SANITY_FLAGS} -fsanitize=undefined")
+    set(MS_FLAGS "${MS_FLAGS} -fsanitize=undefined")
 endif()
 
 if (JULIET_INHOUSE_PERFORMANCE)
