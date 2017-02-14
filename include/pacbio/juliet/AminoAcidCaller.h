@@ -54,76 +54,11 @@
 #include <pacbio/data/MSA.h>
 #include <pacbio/juliet/ErrorEstimates.h>
 #include <pacbio/juliet/TargetConfig.h>
+#include <pacbio/juliet/VariantGene.h>
 #include <pbcopper/json/JSON.h>
 
 namespace PacBio {
 namespace Juliet {
-namespace {
-struct VariantGene
-{
-    std::string geneName;
-
-    struct VariantPosition
-    {
-        std::string refCodon;
-        char refAminoAcid;
-        std::vector<JSON::Json> msa;
-        int coverage;
-
-        struct VariantCodon
-        {
-            std::string codon;
-            double frequency;
-            double pValue;
-            std::string knownDRM;
-        };
-        std::map<char, std::vector<VariantCodon>> aminoAcidToCodons;
-    };
-
-    std::map<int, VariantPosition> relPositionToVariant;
-
-    JSON::Json ToJson() const
-    {
-        using namespace JSON;
-        Json root;
-        root["name"] = geneName;
-        std::vector<Json> positions;
-        for (const auto& pos_variant : relPositionToVariant) {
-            Json jVarPos;
-            jVarPos["ref_position"] = pos_variant.first;
-            jVarPos["ref_codon"] = pos_variant.second.refCodon;
-            jVarPos["coverage"] = pos_variant.second.coverage;
-            jVarPos["ref_amino_acid"] = std::string(1, pos_variant.second.refAminoAcid);
-
-            if (pos_variant.second.aminoAcidToCodons.empty()) continue;
-            std::vector<Json> jVarAAs;
-            for (const auto& aa_varCodon : pos_variant.second.aminoAcidToCodons) {
-                Json jVarAA;
-                jVarAA["amino_acid"] = std::string(1, aa_varCodon.first);
-                std::vector<Json> jCodons;
-
-                if (aa_varCodon.second.empty()) continue;
-                for (const auto& codon : aa_varCodon.second) {
-                    Json jCodon;
-                    jCodon["codon"] = codon.codon;
-                    jCodon["frequency"] = codon.frequency;
-                    jCodon["pValue"] = codon.pValue;
-                    jCodon["known_drm"] = codon.knownDRM;
-                    jCodons.push_back(jCodon);
-                }
-                jVarAA["variant_codons"] = jCodons;
-                jVarAAs.push_back(jVarAA);
-            }
-            jVarPos["variant_amino_acids"] = jVarAAs;
-            jVarPos["msa"] = pos_variant.second.msa;
-            positions.push_back(jVarPos);
-        }
-        if (!positions.empty()) root["variant_positions"] = positions;
-        return root;
-    }
-};
-}
-
 /// Given a MSA and p-values for each nucleotide of each position,
 /// generate machine-interpretable and human-readable output about mutated
 /// amino acids.
