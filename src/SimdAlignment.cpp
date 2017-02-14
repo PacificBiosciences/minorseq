@@ -48,74 +48,74 @@
 namespace PacBio {
 namespace Align {
 PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string &target,
-                                                 const std::string &query) {
-  StripedSmithWaterman::Aligner aligner;
-  StripedSmithWaterman::Filter filter;
-  StripedSmithWaterman::Alignment alignment;
-  aligner.Align(query.c_str(), target.c_str(), target.size(), filter,
-                &alignment);
+                                                 const std::string &query)
+{
+    StripedSmithWaterman::Aligner aligner;
+    StripedSmithWaterman::Filter filter;
+    StripedSmithWaterman::Alignment alignment;
+    aligner.Align(query.c_str(), target.c_str(), target.size(), filter, &alignment);
 
-  size_t qryPos = 0;
-  size_t tgtPos = 0;
+    size_t qryPos = 0;
+    size_t tgtPos = 0;
 
-  std::string refAlign;
-  std::string qryAlign;
-  std::string transcript;
+    std::string refAlign;
+    std::string qryAlign;
+    std::string transcript;
 
-  for (int i = 0; i < alignment.ref_begin; ++i) {
-    refAlign += target.at(tgtPos++);
-    qryAlign += "-";
-    transcript += "P";
-  }
-  for (const auto &c : BAM::Cigar::FromStdString(alignment.cigar_string)) {
-    for (size_t i = 0; i < c.Length(); ++i) {
-      transcript += c.Char();
-
-      switch (c.Char()) {
-      case '=':
-        assert(target.at(tgtPos) == query.at(qryPos));
-      case 'M':
-      case 'X':
-        refAlign += target.at(tgtPos++);
-        qryAlign += query.at(qryPos++);
-        break;
-      case 'D':
+    for (int i = 0; i < alignment.ref_begin; ++i) {
         refAlign += target.at(tgtPos++);
         qryAlign += "-";
-        break;
-      case 'I':
-      case 'S':
-        refAlign += "-";
-        qryAlign += query.at(qryPos++);
-        break;
-      case 'H':
-        throw std::runtime_error("H");
-      default:
-        throw std::runtime_error("unknown");
-      }
+        transcript += "P";
     }
-  }
+    for (const auto &c : BAM::Cigar::FromStdString(alignment.cigar_string)) {
+        for (size_t i = 0; i < c.Length(); ++i) {
+            transcript += c.Char();
 
-  while (tgtPos < target.size()) {
-    refAlign += target.at(tgtPos++);
-    qryAlign += "-";
-    transcript += "P";
-  }
+            switch (c.Char()) {
+                case '=':
+                    assert(target.at(tgtPos) == query.at(qryPos));
+                case 'M':
+                case 'X':
+                    refAlign += target.at(tgtPos++);
+                    qryAlign += query.at(qryPos++);
+                    break;
+                case 'D':
+                    refAlign += target.at(tgtPos++);
+                    qryAlign += "-";
+                    break;
+                case 'I':
+                case 'S':
+                    refAlign += "-";
+                    qryAlign += query.at(qryPos++);
+                    break;
+                case 'H':
+                    throw std::runtime_error("H");
+                default:
+                    throw std::runtime_error("unknown");
+            }
+        }
+    }
 
-  PariwiseAlignmentFasta result;
-  result.Target = std::move(refAlign);
-  result.Query = std::move(qryAlign);
-  result.Transcript = std::move(transcript);
+    while (tgtPos < target.size()) {
+        refAlign += target.at(tgtPos++);
+        qryAlign += "-";
+        transcript += "P";
+    }
 
-  assert(refAlign.size() == qryAlign.size());
+    PariwiseAlignmentFasta result;
+    result.Target = std::move(refAlign);
+    result.Query = std::move(qryAlign);
+    result.Transcript = std::move(transcript);
 
-  // std::ofstream out("out.msa");
-  // out << ">ref" << std::endl
-  //     << refAlign << std::endl
-  //     << ">target" << std::endl
-  //     << qryAlign << std::endl;
-  // out.flush();
-  return result;
+    assert(refAlign.size() == qryAlign.size());
+
+    // std::ofstream out("out.msa");
+    // out << ">ref" << std::endl
+    //     << refAlign << std::endl
+    //     << ">target" << std::endl
+    //     << qryAlign << std::endl;
+    // out.flush();
+    return result;
 }
 }
-} // namespace PacBio::Align
+}  // namespace PacBio::Align

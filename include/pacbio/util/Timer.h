@@ -43,18 +43,19 @@
 namespace PacBio {
 namespace Util {
 
-class Timer {
+class Timer
+{
 public:
-  Timer();
+    Timer();
 
-  float ElapsedMilliseconds() const;
-  float ElapsedSeconds() const;
-  std::string ElapsedTime() const;
-  void Restart();
+    float ElapsedMilliseconds() const;
+    float ElapsedSeconds() const;
+    std::string ElapsedTime() const;
+    void Restart();
 
 private:
-  std::chrono::time_point<std::chrono::steady_clock> tick;
+    std::chrono::time_point<std::chrono::steady_clock> tick;
 };
 
-} // namespace Util
-} // namespace PacBio
+}  // namespace Util
+}  // namespace PacBio

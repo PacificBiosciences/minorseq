@@ -9,18 +9,19 @@
 
 namespace PacBio {
 namespace Statistics {
-class Fisher {
+class Fisher
+{
 public:
-  static double fisher_exact_tiss(int chi11, int chi12, int chi21, int chi22);
+    static double fisher_exact_tiss(int chi11, int chi12, int chi21, int chi22);
 
 private:
-  static double factorInc(int chi11, int chi12, int chi21, int chi22);
-  static double factorDec(int chi11, int chi12, int chi21, int chi22);
-  static double gammln(double xx);
-  static double factln0(int n);
-  static double factln(int n);
-  static double binomialln(int n, int k);
-  static double calc_hypergeom(int chi11, int chi12, int chi21, int chi22);
+    static double factorInc(int chi11, int chi12, int chi21, int chi22);
+    static double factorDec(int chi11, int chi12, int chi21, int chi22);
+    static double gammln(double xx);
+    static double factln0(int n);
+    static double factln(int n);
+    static double binomialln(int n, int k);
+    static double calc_hypergeom(int chi11, int chi12, int chi21, int chi22);
 };
 }
-} //::PacBio::Statistics
+}  //::PacBio::Statistics

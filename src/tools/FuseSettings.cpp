@@ -37,9 +37,9 @@
 
 #include <thread>
 
-#include <boost/algorithm/string.hpp>
 #include <pacbio/Version.h>
 #include <pacbio/data/PlainOption.h>
+#include <boost/algorithm/string.hpp>
 
 #include <pacbio/fuse/FuseSettings.h>
 
@@ -63,48 +63,49 @@ const PlainOption Output{
     CLI::Option::StringType("")
 };
 // clang-format on
-} // namespace OptionNames
+}  // namespace OptionNames
 
 FuseSettings::FuseSettings(const PacBio::CLI::Results &options)
-    : InputFiles(options.PositionalArguments()) {
-  if (!options[OptionNames::Output].empty())
-    OutputPrefix = std::forward<std::string>(options[OptionNames::Output]);
-  // SplitRegion(options[OptionNames::Region], &RegionStart, &RegionEnd);
+    : InputFiles(options.PositionalArguments())
+{
+    if (!options[OptionNames::Output].empty())
+        OutputPrefix = std::forward<std::string>(options[OptionNames::Output]);
+    // SplitRegion(options[OptionNames::Region], &RegionStart, &RegionEnd);
 }
 
-size_t FuseSettings::ThreadCount(int n) {
-  const int m = std::thread::hardware_concurrency();
+size_t FuseSettings::ThreadCount(int n)
+{
+    const int m = std::thread::hardware_concurrency();
 
-  if (n < 1)
-    return std::max(1, m + n);
+    if (n < 1) return std::max(1, m + n);
 
-  return std::min(m, n);
+    return std::min(m, n);
 }
 
-void FuseSettings::SplitRegion(const std::string &region, int *start,
-                               int *end) {
-  if (region.compare("") != 0) {
-    std::vector<std::string> splitVec;
-    boost::split(splitVec, region, boost::is_any_of("-"));
-    *start = stoi(splitVec[0]);
-    *end = stoi(splitVec[1]);
-    if (*start <= 0 || *end <= 0)
-      throw std::runtime_error("Indexing is 1-based");
-  }
+void FuseSettings::SplitRegion(const std::string &region, int *start, int *end)
+{
+    if (region.compare("") != 0) {
+        std::vector<std::string> splitVec;
+        boost::split(splitVec, region, boost::is_any_of("-"));
+        *start = stoi(splitVec[0]);
+        *end = stoi(splitVec[1]);
+        if (*start <= 0 || *end <= 0) throw std::runtime_error("Indexing is 1-based");
+    }
 }
 
-PacBio::CLI::Interface FuseSettings::CreateCLI() {
-  using Option = PacBio::CLI::Option;
-  using Task = PacBio::CLI::ToolContract::Task;
+PacBio::CLI::Interface FuseSettings::CreateCLI()
+{
+    using Option = PacBio::CLI::Option;
+    using Task = PacBio::CLI::ToolContract::Task;
 
-  PacBio::CLI::Interface i{"fuse", "Fuse, a BAM alignment consensus caller",
-                           PacBio::MinorseqVersion() + " (commit " +
-                               PacBio::MinorseqGitSha1() + ")"};
+    PacBio::CLI::Interface i{
+        "fuse", "Fuse, a BAM alignment consensus caller",
+        PacBio::MinorseqVersion() + " (commit " + PacBio::MinorseqGitSha1() + ")"};
 
-  i.AddHelpOption();    // use built-in help output
-  i.AddVersionOption(); // use built-in version output
+    i.AddHelpOption();     // use built-in help output
+    i.AddVersionOption();  // use built-in version output
 
-  // clang-format off
+    // clang-format off
     i.AddPositionalArguments({
         {"source", "Source BAM or DataSet XML file.", "FILE"}
     });
@@ -130,9 +131,9 @@ PacBio::CLI::Interface FuseSettings::CreateCLI() {
     CLI::ToolContract::Config tcConfig(tcTask);
     i.EnableToolContract(tcConfig);
 
-  // clang-format on
+    // clang-format on
 
-  return i;
+    return i;
 }
 }
-} // ::PacBio::CCS
+}  // ::PacBio::CCS

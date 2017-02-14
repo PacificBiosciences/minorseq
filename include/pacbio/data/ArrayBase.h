@@ -43,43 +43,58 @@ namespace PacBio {
 namespace Data {
 
 /// A single base in an ArrayRead with its associated qvs and cigar
-struct ArrayBase {
-  ArrayBase(char cigar, char nucleotide, uint8_t qualQV, uint8_t subQV,
-            uint8_t delQV, uint8_t insQV)
-      : Cigar(cigar), Nucleotide(nucleotide), QualQV(qualQV), DelQV(delQV),
-        SubQV(subQV), InsQV(insQV), ProbTrue(1 - pow(10, -1.0 * qualQV / 10.0)),
-        ProbCorrectBase(1 - pow(10, -1.0 * subQV / 10.0)),
-        ProbNoDeletion(1 - pow(10, -1.0 * delQV / 10.0)),
-        ProbNoInsertion(1 - pow(10, -1.0 * insQV / 10.0)) {}
-  ArrayBase(char cigar, char nucleotide, uint8_t qualQV)
-      : Cigar(cigar), Nucleotide(nucleotide), QualQV(qualQV),
-        ProbTrue(1 - pow(10, -1.0 * qualQV / 10.0)) {}
-  ArrayBase(char cigar, char nucleotide)
-      : Cigar(cigar), Nucleotide(nucleotide) {}
+struct ArrayBase
+{
+    ArrayBase(char cigar, char nucleotide, uint8_t qualQV, uint8_t subQV, uint8_t delQV,
+              uint8_t insQV)
+        : Cigar(cigar)
+        , Nucleotide(nucleotide)
+        , QualQV(qualQV)
+        , DelQV(delQV)
+        , SubQV(subQV)
+        , InsQV(insQV)
+        , ProbTrue(1 - pow(10, -1.0 * qualQV / 10.0))
+        , ProbCorrectBase(1 - pow(10, -1.0 * subQV / 10.0))
+        , ProbNoDeletion(1 - pow(10, -1.0 * delQV / 10.0))
+        , ProbNoInsertion(1 - pow(10, -1.0 * insQV / 10.0))
+    {
+    }
+    ArrayBase(char cigar, char nucleotide, uint8_t qualQV)
+        : Cigar(cigar)
+        , Nucleotide(nucleotide)
+        , QualQV(qualQV)
+        , ProbTrue(1 - pow(10, -1.0 * qualQV / 10.0))
+    {
+    }
+    ArrayBase(char cigar, char nucleotide) : Cigar(cigar), Nucleotide(nucleotide) {}
 
-  bool MeetQualQVThreshold(boost::optional<uint8_t> threshold) const {
-    return !threshold || !QualQV || *QualQV >= *threshold;
-  }
-  bool MeetDelQVThreshold(boost::optional<uint8_t> threshold) const {
-    return !threshold || !DelQV || *DelQV >= *threshold;
-  }
-  bool MeetSubQVThreshold(boost::optional<uint8_t> threshold) const {
-    return !threshold || !SubQV || *SubQV >= *threshold;
-  }
-  bool MeetInsQVThreshold(boost::optional<uint8_t> threshold) const {
-    return !threshold || !InsQV || *InsQV >= *threshold;
-  }
+    bool MeetQualQVThreshold(boost::optional<uint8_t> threshold) const
+    {
+        return !threshold || !QualQV || *QualQV >= *threshold;
+    }
+    bool MeetDelQVThreshold(boost::optional<uint8_t> threshold) const
+    {
+        return !threshold || !DelQV || *DelQV >= *threshold;
+    }
+    bool MeetSubQVThreshold(boost::optional<uint8_t> threshold) const
+    {
+        return !threshold || !SubQV || *SubQV >= *threshold;
+    }
+    bool MeetInsQVThreshold(boost::optional<uint8_t> threshold) const
+    {
+        return !threshold || !InsQV || *InsQV >= *threshold;
+    }
 
-  char Cigar;
-  char Nucleotide;
-  boost::optional<uint8_t> QualQV;
-  boost::optional<uint8_t> DelQV;
-  boost::optional<uint8_t> SubQV;
-  boost::optional<uint8_t> InsQV;
-  double ProbTrue = 0;
-  double ProbCorrectBase = 0;
-  double ProbNoDeletion = 0;
-  double ProbNoInsertion = 0;
+    char Cigar;
+    char Nucleotide;
+    boost::optional<uint8_t> QualQV;
+    boost::optional<uint8_t> DelQV;
+    boost::optional<uint8_t> SubQV;
+    boost::optional<uint8_t> InsQV;
+    double ProbTrue = 0;
+    double ProbCorrectBase = 0;
+    double ProbNoDeletion = 0;
+    double ProbNoInsertion = 0;
 };
-} // namespace Data
-} // namespace PacBio
+}  // namespace Data
+}  // namespace PacBio

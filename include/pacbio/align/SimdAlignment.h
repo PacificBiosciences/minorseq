@@ -42,13 +42,14 @@
 namespace PacBio {
 namespace Align {
 
-struct PariwiseAlignmentFasta {
-  std::string Target;
-  std::string Query;
-  std::string Transcript;
+struct PariwiseAlignmentFasta
+{
+    std::string Target;
+    std::string Query;
+    std::string Transcript;
 };
 
 PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string &target,
                                                  const std::string &query);
-} // namespace Align
-} // namespace PacBio
+}  // namespace Align
+}  // namespace PacBio

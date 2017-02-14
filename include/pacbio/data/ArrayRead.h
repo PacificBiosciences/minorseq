@@ -51,90 +51,95 @@
 namespace PacBio {
 namespace Data {
 
-#if __cplusplus < 201402L // C++11
+#if __cplusplus < 201402L  // C++11
 char TagToNucleotide(uint8_t t);
 uint8_t NucleotideToTag(char t);
-#else // C++14
+#else  // C++14
 // Convert {0, 1, 2, 3, 4} to {'A', 'C', 'G', 'T', '-'}
-static constexpr char TagToNucleotide(uint8_t t) {
-  switch (t) {
-  case 0:
-    return 'A';
-  case 1:
-    return 'C';
-  case 2:
-    return 'G';
-  case 3:
-    return 'T';
-  case 4:
-    return '-';
-  default:
-    return 0;
-    // throw std::runtime_error("Woot is that tag? " + std::to_string(t));
-  }
+static constexpr char TagToNucleotide(uint8_t t)
+{
+    switch (t) {
+        case 0:
+            return 'A';
+        case 1:
+            return 'C';
+        case 2:
+            return 'G';
+        case 3:
+            return 'T';
+        case 4:
+            return '-';
+        default:
+            return 0;
+            // throw std::runtime_error("Woot is that tag? " + std::to_string(t));
+    }
 }
 // Convert {'A', 'C', 'G', 'T', '-', 'N'} to {0, 1, 2, 3, 4, 4}
-static constexpr uint8_t NucleotideToTag(char t) {
-  switch (t) {
-  case 'A':
-    return 0;
-  case 'C':
-    return 1;
-  case 'G':
-    return 2;
-  case 'T':
-    return 3;
-  case 'N':
-    return 4;
-  case '-':
-    return 4;
-  default:
-    return 0;
-    // throw std::runtime_error("Woot is that char " + std::to_string(t));
-  }
+static constexpr uint8_t NucleotideToTag(char t)
+{
+    switch (t) {
+        case 'A':
+            return 0;
+        case 'C':
+            return 1;
+        case 'G':
+            return 2;
+        case 'T':
+            return 3;
+        case 'N':
+            return 4;
+        case '-':
+            return 4;
+        default:
+            return 0;
+            // throw std::runtime_error("Woot is that char " + std::to_string(t));
+    }
 }
 #endif
 
 /// A single array read that is "unrolled", as in an array of bases.
-class ArrayRead {
-public: // ctors
-  ArrayRead(int idx = -1);
+class ArrayRead
+{
+public:  // ctors
+    ArrayRead(int idx = -1);
 
-  // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
+    // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
 
-public: // non-mod methods
-  int ReferenceStart() const { return referenceStart_; }
-  int ReferenceEnd() const { return referenceEnd_; }
+public:  // non-mod methods
+    int ReferenceStart() const { return referenceStart_; }
+    int ReferenceEnd() const { return referenceEnd_; }
 
 public:
-  friend std::ostream &operator<<(std::ostream &stream, const ArrayRead &r) {
-    stream << r.ReferenceStart() << std::endl;
-    for (const auto &b : r.Bases)
-      stream << b.Cigar;
-    stream << std::endl;
-    for (const auto &b : r.Bases)
-      stream << b.Nucleotide;
-    return stream;
-  }
+    friend std::ostream &operator<<(std::ostream &stream, const ArrayRead &r)
+    {
+        stream << r.ReferenceStart() << std::endl;
+        for (const auto &b : r.Bases)
+            stream << b.Cigar;
+        stream << std::endl;
+        for (const auto &b : r.Bases)
+            stream << b.Nucleotide;
+        return stream;
+    }
 
-public: // data
-  std::vector<ArrayBase> Bases;
-  const int Idx;
+public:  // data
+    std::vector<ArrayBase> Bases;
+    const int Idx;
 
 protected:
-  size_t referenceStart_;
-  size_t referenceEnd_;
+    size_t referenceStart_;
+    size_t referenceEnd_;
 };
 
-class BAMArrayRead : public ArrayRead {
-public: // ctors
-  /// Constructor that needs the BamRecord to be "unrolled" and a unique index
-  BAMArrayRead(const BAM::BamRecord &record, int idx);
+class BAMArrayRead : public ArrayRead
+{
+public:  // ctors
+    /// Constructor that needs the BamRecord to be "unrolled" and a unique index
+    BAMArrayRead(const BAM::BamRecord &record, int idx);
 
-  // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
+    // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
 
 private:
-  const BAM::BamRecord Record;
+    const BAM::BamRecord Record;
 };
-} // namespace Data
-} // namespace PacBio
+}  // namespace Data
+}  // namespace PacBio

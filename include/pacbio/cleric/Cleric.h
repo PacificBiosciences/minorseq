@@ -50,26 +50,27 @@
 namespace PacBio {
 namespace Cleric {
 
-class Cleric {
+class Cleric
+{
 public:
-  Cleric(const std::string &alignmentPath, const std::string &outputFile,
-         const std::string &fromReference, const std::string &fromReferenceName,
-         const std::string &toReference, const std::string &toReferenceName)
-      : alignmentPath_(alignmentPath), fromReferenceName_(fromReferenceName),
-        toReferenceName_(toReferenceName) {
-    Align(fromReference, toReference, &fromReferenceSequence_,
-          &toReferenceSequence_);
-    Convert(outputFile);
-  }
+    Cleric(const std::string &alignmentPath, const std::string &outputFile,
+           const std::string &fromReference, const std::string &fromReferenceName,
+           const std::string &toReference, const std::string &toReferenceName)
+        : alignmentPath_(alignmentPath)
+        , fromReferenceName_(fromReferenceName)
+        , toReferenceName_(toReferenceName)
+    {
+        Align(fromReference, toReference, &fromReferenceSequence_, &toReferenceSequence_);
+        Convert(outputFile);
+    }
 
 private:
-  void Convert(const std::string &outputFile);
-  void Align(const std::string &fromReference, const std::string &toReference,
-             std::string *fromReferenceAligned,
-             std::string *toReferenceAligned);
+    void Convert(const std::string &outputFile);
+    void Align(const std::string &fromReference, const std::string &toReference,
+               std::string *fromReferenceAligned, std::string *toReferenceAligned);
 
 private:
-  // clang-format off
+    // clang-format off
   const BAM::CigarOperation newMatch_ =
       BAM::CigarOperation(BAM::CigarOperationType::SEQUENCE_MATCH, 1);
   const BAM::CigarOperation newDel_ =
@@ -82,20 +83,20 @@ private:
       BAM::CigarOperation(BAM::CigarOperationType::SOFT_CLIP, 1);
   const BAM::CigarOperation newHard_ =
       BAM::CigarOperation(BAM::CigarOperationType::HARD_CLIP, 1);
-  // clang-format on
+    // clang-format on
 
 private:
-  const std::string alignmentPath_;
-  std::string fromReferenceSequence_;
-  std::string fromReferenceName_;
-  std::string toReferenceSequence_;
-  std::string toReferenceName_;
+    const std::string alignmentPath_;
+    std::string fromReferenceSequence_;
+    std::string fromReferenceName_;
+    std::string toReferenceSequence_;
+    std::string toReferenceName_;
 
-  std::string toReferenceGapless_;
-  std::map<int, int> fasta_pos_to_sam_pos;
+    std::string toReferenceGapless_;
+    std::map<int, int> fasta_pos_to_sam_pos;
 
-  std::string fromReferenceGapless_;
-  std::map<int, int> sam_pos_to_fasta_pos;
+    std::string fromReferenceGapless_;
+    std::map<int, int> sam_pos_to_fasta_pos;
 };
 }
-} // ::PacBio::Cleric
+}  // ::PacBio::Cleric

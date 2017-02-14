@@ -47,54 +47,51 @@
 namespace PacBio {
 namespace Data {
 /// Multiple sequence alignment containing counts
-class MSA {
+class MSA
+{
 private:
-  using MsaVec = std::vector<MSAColumn>;
+    using MsaVec = std::vector<MSAColumn>;
 
 public:
-  using MsaIt = MsaVec::iterator;
-  using MsaItConst = MsaVec::const_iterator;
+    using MsaIt = MsaVec::iterator;
+    using MsaItConst = MsaVec::const_iterator;
 
 public:
-  MSA(const std::vector<Data::ArrayRead> &reads);
-  MSA(const std::vector<Data::ArrayRead> &reads,
-      const boost::optional<uint8_t> qualQv,
-      const boost::optional<uint8_t> delQv,
-      const boost::optional<uint8_t> subQv,
-      const boost::optional<uint8_t> insQv);
-  MSA(const std::vector<Data::ArrayRead> &reads, const MSA &prior);
+    MSA(const std::vector<Data::ArrayRead> &reads);
+    MSA(const std::vector<Data::ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+        const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
+        const boost::optional<uint8_t> insQv);
+    MSA(const std::vector<Data::ArrayRead> &reads, const MSA &prior);
 
 public:
-  /// Parameter is an index in ABSOLUTE reference space
-  MSAColumn operator[](int i) const { return counts[i - beginPos]; }
-  /// Parameter is an index in ABSOLUTE reference space
-  MSAColumn &operator[](int i) { return counts[i - beginPos]; }
+    /// Parameter is an index in ABSOLUTE reference space
+    MSAColumn operator[](int i) const { return counts[i - beginPos]; }
+    /// Parameter is an index in ABSOLUTE reference space
+    MSAColumn &operator[](int i) { return counts[i - beginPos]; }
 
-  bool has(int i) { return i >= beginPos && i < endPos; }
+    bool has(int i) { return i >= beginPos && i < endPos; }
 
-  // clang-format off
+    // clang-format off
     MsaIt      begin()        { return counts.begin();  }
     MsaIt      end()          { return counts.end();    }
     MsaItConst begin() const  { return counts.begin();  }
     MsaItConst end() const    { return counts.end();    }
     MsaItConst cbegin() const { return counts.cbegin(); }
     MsaItConst cend() const   { return counts.cend();   }
-  // clang-format on
+    // clang-format on
 
 public:
-  MsaVec counts;
-  int beginPos = std::numeric_limits<int>::max();
-  int endPos = 0;
+    MsaVec counts;
+    int beginPos = std::numeric_limits<int>::max();
+    int endPos = 0;
 
 private:
-  void BeginEnd(const std::vector<Data::ArrayRead> &reads);
-  void FillCounts(const std::vector<ArrayRead> &reads);
-  void FillCounts(const std::vector<ArrayRead> &reads,
-                  const boost::optional<uint8_t> qualQv,
-                  const boost::optional<uint8_t> delQv,
-                  const boost::optional<uint8_t> subQv,
-                  const boost::optional<uint8_t> insQv);
-  void FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior);
+    void BeginEnd(const std::vector<Data::ArrayRead> &reads);
+    void FillCounts(const std::vector<ArrayRead> &reads);
+    void FillCounts(const std::vector<ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+                    const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
+                    const boost::optional<uint8_t> insQv);
+    void FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior);
 };
-} // namespace Data
-} // namespace PacBio
+}  // namespace Data
+}  // namespace PacBio

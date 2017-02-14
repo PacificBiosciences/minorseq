@@ -37,9 +37,9 @@
 
 #include <thread>
 
-#include <boost/algorithm/string.hpp>
 #include <pacbio/Version.h>
 #include <pacbio/data/PlainOption.h>
+#include <boost/algorithm/string.hpp>
 
 #include <pacbio/cleric/ClericSettings.h>
 
@@ -56,26 +56,27 @@ const PlainOption Output{
     CLI::Option::StringType("")
 };
 // clang-format on
-} // namespace OptionNames
+}  // namespace OptionNames
 
 ClericSettings::ClericSettings(const PacBio::CLI::Results &options)
-    : InputFiles(options.PositionalArguments()) {
-  if (!options[OptionNames::Output].empty())
-    OutputPrefix = std::forward<std::string>(options[OptionNames::Output]);
+    : InputFiles(options.PositionalArguments())
+{
+    if (!options[OptionNames::Output].empty())
+        OutputPrefix = std::forward<std::string>(options[OptionNames::Output]);
 }
-PacBio::CLI::Interface ClericSettings::CreateCLI() {
-  using Option = PacBio::CLI::Option;
-  using Task = PacBio::CLI::ToolContract::Task;
+PacBio::CLI::Interface ClericSettings::CreateCLI()
+{
+    using Option = PacBio::CLI::Option;
+    using Task = PacBio::CLI::ToolContract::Task;
 
-  PacBio::CLI::Interface i{"cleric",
-                           "Cleric, a BAM alignment reference converter",
-                           PacBio::MinorseqVersion() + " (commit " +
-                               PacBio::MinorseqGitSha1() + ")"};
+    PacBio::CLI::Interface i{
+        "cleric", "Cleric, a BAM alignment reference converter",
+        PacBio::MinorseqVersion() + " (commit " + PacBio::MinorseqGitSha1() + ")"};
 
-  i.AddHelpOption();    // use built-in help output
-  i.AddVersionOption(); // use built-in version output
+    i.AddHelpOption();     // use built-in help output
+    i.AddVersionOption();  // use built-in version output
 
-  // clang-format off
+    // clang-format off
     i.AddPositionalArguments({
         {"source", "Source BAM or DataSet XML file.", "FILE"}
     });
@@ -100,9 +101,9 @@ PacBio::CLI::Interface ClericSettings::CreateCLI() {
     CLI::ToolContract::Config tcConfig(tcTask);
     i.EnableToolContract(tcConfig);
 
-  // clang-format on
+    // clang-format on
 
-  return i;
+    return i;
 }
 }
-} // ::PacBio::CCS
+}  // ::PacBio::CCS

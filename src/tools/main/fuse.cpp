@@ -50,35 +50,36 @@
 namespace {
 using namespace PacBio::Fuse;
 
-static int Runner(const PacBio::CLI::Results &options) {
-  // Check args size, as pbcopper does not enforce the correct number
-  if (options.PositionalArguments().empty()) {
-    std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // Parse options
-  FuseSettings settings(options);
-  // if (settings.OutputPrefix)
-  for (const auto &input : options.PositionalArguments()) {
-    Fuse fuse(input);
-    std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";
-    if (!settings.OutputPrefix.empty()) {
-      std::string infix;
-      if (settings.OutputPrefix.back() != '/')
-        infix = '_';
-      outputFileName = settings.OutputPrefix + infix + outputFileName;
+static int Runner(const PacBio::CLI::Results &options)
+{
+    // Check args size, as pbcopper does not enforce the correct number
+    if (options.PositionalArguments().empty()) {
+        std::cerr << "ERROR: Please provide BAM input, see --help" << std::endl;
+        return EXIT_FAILURE;
     }
-    std::ofstream outputFile(outputFileName);
-    outputFile << ">CONSENSUS" << std::endl;
-    outputFile << fuse.ConsensusSequence() << std::endl;
-  }
 
-  return EXIT_SUCCESS;
+    // Parse options
+    FuseSettings settings(options);
+    // if (settings.OutputPrefix)
+    for (const auto &input : options.PositionalArguments()) {
+        Fuse fuse(input);
+        std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";
+        if (!settings.OutputPrefix.empty()) {
+            std::string infix;
+            if (settings.OutputPrefix.back() != '/') infix = '_';
+            outputFileName = settings.OutputPrefix + infix + outputFileName;
+        }
+        std::ofstream outputFile(outputFileName);
+        outputFile << ">CONSENSUS" << std::endl;
+        outputFile << fuse.ConsensusSequence() << std::endl;
+    }
+
+    return EXIT_SUCCESS;
 }
 };
 
 // Entry point
-int main(int argc, char *argv[]) {
-  return PacBio::CLI::Run(argc, argv, FuseSettings::CreateCLI(), &Runner);
+int main(int argc, char *argv[])
+{
+    return PacBio::CLI::Run(argc, argv, FuseSettings::CreateCLI(), &Runner);
 }
