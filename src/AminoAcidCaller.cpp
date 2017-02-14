@@ -61,13 +61,13 @@
 
 namespace PacBio {
 namespace Juliet {
-AminoAcidCaller::AminoAcidCaller(const std::vector<Data::ArrayRead> &reads,
-                                 const ErrorEstimates &error, const TargetConfig &targetConfig)
+AminoAcidCaller::AminoAcidCaller(const std::vector<Data::ArrayRead>& reads,
+                                 const ErrorEstimates& error, const TargetConfig& targetConfig)
     : error_(error), targetConfig_(targetConfig)
 {
-    auto SetQV = [](const char *env, boost::optional<uint8_t> *qv,
+    auto SetQV = [](const char* env, boost::optional<uint8_t>* qv,
                     boost::optional<uint8_t> defaultQv = boost::none) {
-        char *val = std::getenv(env);
+        char* val = std::getenv(env);
         *qv = val == NULL ? defaultQv : std::stoi(std::string(val));
     };
     SetQV("DELQV", &delQv_);
@@ -75,7 +75,7 @@ AminoAcidCaller::AminoAcidCaller(const std::vector<Data::ArrayRead> &reads,
     SetQV("INSQV", &insQv_);
     SetQV("QUALQV", &qualQv_);
 
-    for (const auto &r : reads) {
+    for (const auto& r : reads) {
         beginPos_ = std::min(beginPos_, r.ReferenceStart());
         endPos_ = std::max(endPos_, r.ReferenceEnd());
     }
@@ -89,14 +89,14 @@ AminoAcidCaller::AminoAcidCaller(const std::vector<Data::ArrayRead> &reads,
     CallVariants(reads);
 }
 
-void AminoAcidCaller::GenerateMSA(const std::vector<Data::ArrayRead> &reads)
+void AminoAcidCaller::GenerateMSA(const std::vector<Data::ArrayRead>& reads)
 {
     matrix_.reserve(reads.size());
-    for (const auto &r : reads) {
+    for (const auto& r : reads) {
         int pos = r.ReferenceStart() - beginPos_;
         assert(pos >= 0);
         std::vector<char> row(endPos_ - beginPos_, ' ');
-        for (const auto &b : r.Bases) {
+        for (const auto& b : r.Bases) {
             switch (b.Cigar) {
                 case 'X':
                 case '=':
@@ -120,10 +120,10 @@ void AminoAcidCaller::GenerateMSA(const std::vector<Data::ArrayRead> &reads)
     }
 }
 
-int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene> &genes) const
+int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) const
 {
     int numberOfTests = 0;
-    for (const auto &gene : genes) {
+    for (const auto& gene : genes) {
         for (int i = gene.begin; i < gene.end - 2; ++i) {
             // Relative to gene begin
             const int ri = i - gene.begin;
@@ -133,7 +133,7 @@ int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene> &genes) co
             const int bi = i - beginPos_;
 
             std::unordered_map<std::string, int> codons;
-            for (const auto &row : matrix_) {
+            for (const auto& row : matrix_) {
                 // Read does not cover codon
                 if (bi + 2 >= static_cast<int>(row.size()) || bi < 0) continue;
                 if (row.at(bi + 0) == ' ' || row.at(bi + 1) == ' ' || row.at(bi + 2) == ' ')
@@ -156,14 +156,14 @@ int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene> &genes) co
     return numberOfTests;
 }
 
-std::string AminoAcidCaller::FindDRMs(const std::string &geneName,
-                                      const std::vector<TargetGene> &genes,
+std::string AminoAcidCaller::FindDRMs(const std::string& geneName,
+                                      const std::vector<TargetGene>& genes,
                                       const int position) const
 {
     std::string drmSummary;
-    for (const auto &gene : genes) {
+    for (const auto& gene : genes) {
         if (geneName == gene.name) {
-            for (const auto &drms : gene.drms) {
+            for (const auto& drms : gene.drms) {
                 if (std::find(drms.positions.cbegin(), drms.positions.cend(), position) !=
                     drms.positions.cend()) {
                     if (!drmSummary.empty()) drmSummary += " + ";
@@ -175,7 +175,7 @@ std::string AminoAcidCaller::FindDRMs(const std::string &geneName,
     }
     return drmSummary;
 };
-void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
+void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead>& reads)
 {
     auto genes = targetConfig_.targetGenes;
     bool hasReference = !targetConfig_.referenceSequence.empty();
@@ -190,7 +190,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
     int geneOffset = 0;
 
     const auto SetNewGene = [this, &geneName, &curVariantGene, &geneOffset](
-        const int begin, const std::string &name) {
+        const int begin, const std::string& name) {
         geneName = name;
         if (!curVariantGene.relPositionToVariant.empty())
             variantGenes_.push_back(std::move(curVariantGene));
@@ -199,7 +199,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
         geneOffset = begin;
     };
 
-    const auto CodonProbability = [this](const std::string &a, const std::string &b) {
+    const auto CodonProbability = [this](const std::string& a, const std::string& b) {
         double p = 1;
         for (int i = 0; i < 3; ++i) {
             if (a[i] == '-' || b[i] == '-')
@@ -220,8 +220,8 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
     double falseNegative = 0;
     double trueNegative = 0;
     auto MeasurePerformance = [&truePositives, &falsePositives, &falseNegative, &trueNegative, this,
-                               &geneName](const std::pair<std::string, int> &codon_counts,
-                                          const int &codonPos, const int &i, const double &p) {
+                               &geneName](const std::pair<std::string, int>& codon_counts,
+                                          const int& codonPos, const int& i, const double& p) {
         const auto curCodon = codonToAmino_.at(codon_counts.first);
         bool predictor = (i == 3191 && curCodon == 'Y' && "TAC" == codon_counts.first) ||
                          (i == 2741 && curCodon == 'R' && "AGA" == codon_counts.first) ||
@@ -273,7 +273,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
     };
 #endif
 
-    for (const auto &gene : genes) {
+    for (const auto& gene : genes) {
         SetNewGene(gene.begin, gene.name);
         for (int i = gene.begin; i < gene.end - 2; ++i) {
             // Absolute reference position
@@ -286,11 +286,11 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
             const int bi = i - beginPos_;
 
             const int codonPos = 1 + (ri / 3);
-            auto &curVariantPosition = curVariantGene.relPositionToVariant[codonPos];
+            auto& curVariantPosition = curVariantGene.relPositionToVariant[codonPos];
 
             std::map<std::string, int> codons;
             int coverage = 0;
-            for (const auto &row : matrix_) {
+            for (const auto& row : matrix_) {
                 // Read does not cover codon
                 if (bi + 2 > static_cast<int>(row.size()) || bi < 0) continue;
                 if (row.at(bi + 0) == ' ' || row.at(bi + 1) == ' ' || row.at(bi + 2) == ' ')
@@ -318,7 +318,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
             } else {
                 int max = -1;
                 std::string argmax;
-                for (const auto &codon_counts : codons) {
+                for (const auto& codon_counts : codons) {
                     if (codon_counts.second > max) {
                         max = codon_counts.second;
                         argmax = codon_counts.first;
@@ -331,7 +331,7 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
                 curVariantPosition.refAminoAcid = codonToAmino_.at(curVariantPosition.refCodon);
             }
 
-            for (const auto &codon_counts : codons) {
+            for (const auto& codon_counts : codons) {
                 if (codonToAmino_.at(codon_counts.first) == curVariantPosition.refAminoAcid)
                     continue;
                 double p = (Statistics::Fisher::fisher_exact_tiss(
@@ -398,10 +398,10 @@ void AminoAcidCaller::CallVariants(const std::vector<Data::ArrayRead> &reads)
         variantGenes_.push_back(std::move(curVariantGene));
 }
 
-void AminoAcidCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details)
+void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details)
 {
 #if 1
-    auto strip = [](const std::string &input) -> std::string {
+    auto strip = [](const std::string& input) -> std::string {
         std::string s = input;
         s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
         return s;
@@ -471,7 +471,7 @@ void AminoAcidCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnow
         << std::endl;
 
     if (j.find("genes") == j.cend() || j["genes"].is_null()) return;
-    for (const auto &gene : j["genes"]) {
+    for (const auto& gene : j["genes"]) {
         out << "<table class=\"top\">" << std::endl
             << R"(
                 <col width="40px"/>
@@ -502,7 +502,7 @@ void AminoAcidCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnow
                 </tr>)"
             << std::endl;
 
-        for (auto &variantPosition : gene["variant_positions"]) {
+        for (auto& variantPosition : gene["variant_positions"]) {
             std::stringstream line;
             const std::string refCodon = strip(variantPosition["ref_codon"]);
             line << "<tr class=\"var\">\n"
@@ -514,8 +514,8 @@ void AminoAcidCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnow
             std::string prefix = line.str();
             line.str("");
             bool first = true;
-            for (auto &variant_amino_acid : variantPosition["variant_amino_acids"]) {
-                for (auto &variant_codons : variant_amino_acid["variant_codons"]) {
+            for (auto& variant_amino_acid : variantPosition["variant_amino_acids"]) {
+                for (auto& variant_codons : variant_amino_acid["variant_codons"]) {
                     bool mutated[]{
                         strip(variantPosition["ref_codon"])[0] != strip(variant_codons["codon"])[0],
                         strip(variantPosition["ref_codon"])[1] != strip(variant_codons["codon"])[1],
@@ -571,7 +571,7 @@ void AminoAcidCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnow
                         </tr>
                         )";
 
-                    for (auto &column : variantPosition["msa"]) {
+                    for (auto& column : variantPosition["msa"]) {
                         int relPos = column["rel_pos"];
                         out << "<tr><td>" << relPos << "</td>" << std::endl;
                         for (int j = 0; j < 5; ++j) {
@@ -602,7 +602,7 @@ JSON::Json AminoAcidCaller::JSON()
     using namespace JSON;
     Json root;
     std::vector<Json> genes;
-    for (const auto &v : variantGenes_) {
+    for (const auto& v : variantGenes_) {
         Json j = v.ToJson();
         if (j.find("variant_positions") != j.cend()) genes.push_back(j);
     }

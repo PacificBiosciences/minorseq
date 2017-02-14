@@ -53,7 +53,7 @@ namespace Data {
 
 ArrayRead::ArrayRead(int idx) : Idx(idx){};
 
-BAMArrayRead::BAMArrayRead(const BAM::BamRecord &record, int idx)
+BAMArrayRead::BAMArrayRead(const BAM::BamRecord& record, int idx)
     : ArrayRead(idx), Record(record)  // Record(std::forward<BAM::BamRecord>(record))
 {
     ArrayRead::referenceStart_ = record.ReferenceStart();

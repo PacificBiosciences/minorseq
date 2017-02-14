@@ -110,13 +110,13 @@ public:  // non-mod methods
     int ReferenceEnd() const { return referenceEnd_; }
 
 public:
-    friend std::ostream &operator<<(std::ostream &stream, const ArrayRead &r)
+    friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r)
     {
         stream << r.ReferenceStart() << std::endl;
-        for (const auto &b : r.Bases)
+        for (const auto& b : r.Bases)
             stream << b.Cigar;
         stream << std::endl;
-        for (const auto &b : r.Bases)
+        for (const auto& b : r.Bases)
             stream << b.Nucleotide;
         return stream;
     }
@@ -134,7 +134,7 @@ class BAMArrayRead : public ArrayRead
 {
 public:  // ctors
     /// Constructor that needs the BamRecord to be "unrolled" and a unique index
-    BAMArrayRead(const BAM::BamRecord &record, int idx);
+    BAMArrayRead(const BAM::BamRecord& record, int idx);
 
     // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
 

@@ -55,8 +55,8 @@ JSON::Json DRM::ToJson() const
     return root;
 }
 
-TargetGene::TargetGene(const int begin, const int end, const std::string &name,
-                       const std::vector<DRM> &drms)
+TargetGene::TargetGene(const int begin, const int end, const std::string& name,
+                       const std::vector<DRM>& drms)
     : begin(begin), end(end), name(name), drms(drms)
 {
 }
@@ -68,23 +68,23 @@ JSON::Json TargetGene::ToJson() const
     root["end"] = end;
     root["name"] = name;
     std::vector<JSON::Json> drmJson;
-    for (const auto &d : drms)
+    for (const auto& d : drms)
         drmJson.emplace_back(d.ToJson());
     root["drms"] = drmJson;
     return root;
 }
 
-JSON::Json TargetGene::ToJson(const std::vector<TargetGene> &genes)
+JSON::Json TargetGene::ToJson(const std::vector<TargetGene>& genes)
 {
     JSON::Json root;
     std::vector<JSON::Json> genesJson;
-    for (const auto &g : genes)
+    for (const auto& g : genes)
         genesJson.emplace_back(g.ToJson());
     root["genes"] = genesJson;
     return root;
 }
 
-TargetConfig::TargetConfig(const std::string &input)
+TargetConfig::TargetConfig(const std::string& input)
 {
     const auto inputString = DetermineConfigInput(input);
     if (!inputString.empty()) {
@@ -94,7 +94,7 @@ TargetConfig::TargetConfig(const std::string &input)
     }
 }
 
-std::string TargetConfig::DetermineConfigInput(const std::string &input)
+std::string TargetConfig::DetermineConfigInput(const std::string& input)
 {
     if (input.size() == 0) return "";
 
@@ -118,7 +118,7 @@ std::string TargetConfig::DetermineConfigInput(const std::string &input)
     return output;
 }
 
-std::string TargetConfig::ReferenceSequenceFromJson(const JSON::Json &root)
+std::string TargetConfig::ReferenceSequenceFromJson(const JSON::Json& root)
 {
     if (root.empty() || root.find("referenceSequence") == root.cend() ||
         root["referenceSequence"].empty())
@@ -126,11 +126,11 @@ std::string TargetConfig::ReferenceSequenceFromJson(const JSON::Json &root)
     else
         return root["referenceSequence"];
 }
-std::vector<TargetGene> TargetConfig::TargetGenesFromJson(const JSON::Json &root)
+std::vector<TargetGene> TargetConfig::TargetGenesFromJson(const JSON::Json& root)
 {
     std::vector<TargetGene> genes;
     if (root.empty() || root.find("genes") == root.cend() || root["genes"].empty()) return genes;
-    for (const auto &jGene : root["genes"]) {
+    for (const auto& jGene : root["genes"]) {
         TargetGene g;
         if (jGene.find("name") == jGene.cend()) throw std::runtime_error("Missing name in gene.");
         g.name = jGene["name"];
@@ -140,7 +140,7 @@ std::vector<TargetGene> TargetConfig::TargetGenesFromJson(const JSON::Json &root
         g.end = jGene["end"];
         std::vector<DRM> drms;
         if (jGene.find("drms") != jGene.cend()) {
-            for (const auto &jDrm : jGene["drms"]) {
+            for (const auto& jDrm : jGene["drms"]) {
                 DRM drm;
                 if (jDrm.find("name") == jDrm.cend())
                     throw std::runtime_error("Missing name in drm in gene " + g.name);

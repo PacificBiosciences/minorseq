@@ -50,7 +50,7 @@
 namespace {
 using namespace PacBio::Fuse;
 
-static int Runner(const PacBio::CLI::Results &options)
+static int Runner(const PacBio::CLI::Results& options)
 {
     // Check args size, as pbcopper does not enforce the correct number
     if (options.PositionalArguments().empty()) {
@@ -61,7 +61,7 @@ static int Runner(const PacBio::CLI::Results &options)
     // Parse options
     FuseSettings settings(options);
     // if (settings.OutputPrefix)
-    for (const auto &input : options.PositionalArguments()) {
+    for (const auto& input : options.PositionalArguments()) {
         Fuse fuse(input);
         std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";
         if (!settings.OutputPrefix.empty()) {
@@ -79,7 +79,7 @@ static int Runner(const PacBio::CLI::Results &options)
 };
 
 // Entry point
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     return PacBio::CLI::Run(argc, argv, FuseSettings::CreateCLI(), &Runner);
 }

@@ -53,13 +53,13 @@
 namespace {
 using namespace PacBio::Cleric;
 
-static void ParseInputFiles(const std::vector<std::string> &inputs, std::string *bamPath,
-                            std::string *fromReference, std::string *fromReferenceName,
-                            std::string *toReference, std::string *toReferenceName)
+static void ParseInputFiles(const std::vector<std::string>& inputs, std::string* bamPath,
+                            std::string* fromReference, std::string* fromReferenceName,
+                            std::string* toReference, std::string* toReferenceName)
 {
     using namespace PacBio::BAM;
     std::vector<std::string> fastaPaths;
-    for (const auto &i : inputs) {
+    for (const auto& i : inputs) {
         try {
             BamReader reader(i);
             if (!bamPath->empty()) throw std::runtime_error("Only one BAM input is allowed!");
@@ -73,7 +73,7 @@ static void ParseInputFiles(const std::vector<std::string> &inputs, std::string 
         }
     }
 
-    for (const auto &fasta : fastaPaths) {
+    for (const auto& fasta : fastaPaths) {
         FastaReader msaReader(fasta);
 
         FastaSequence f;
@@ -97,7 +97,7 @@ static void ParseInputFiles(const std::vector<std::string> &inputs, std::string 
     }
 }
 
-static int Runner(const PacBio::CLI::Results &options)
+static int Runner(const PacBio::CLI::Results& options)
 {
     // Check args size, as pbcopper does not enforce the correct number
     if (options.PositionalArguments().empty()) {
@@ -135,7 +135,7 @@ static int Runner(const PacBio::CLI::Results &options)
 };
 
 // Entry point
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     return PacBio::CLI::Run(argc, argv, ClericSettings::CreateCLI(), &Runner);
 }

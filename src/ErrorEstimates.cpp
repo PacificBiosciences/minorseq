@@ -41,7 +41,7 @@
 namespace PacBio {
 namespace Juliet {
 
-ErrorEstimates::ErrorEstimates(const std::string &chemistry)
+ErrorEstimates::ErrorEstimates(const std::string& chemistry)
 {
     if (chemistry == "S/P1-C1" || chemistry == "S/P1-C1.2") {
         match = 0.9930786;

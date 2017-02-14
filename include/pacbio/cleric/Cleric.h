@@ -53,9 +53,9 @@ namespace Cleric {
 class Cleric
 {
 public:
-    Cleric(const std::string &alignmentPath, const std::string &outputFile,
-           const std::string &fromReference, const std::string &fromReferenceName,
-           const std::string &toReference, const std::string &toReferenceName)
+    Cleric(const std::string& alignmentPath, const std::string& outputFile,
+           const std::string& fromReference, const std::string& fromReferenceName,
+           const std::string& toReference, const std::string& toReferenceName)
         : alignmentPath_(alignmentPath)
         , fromReferenceName_(fromReferenceName)
         , toReferenceName_(toReferenceName)
@@ -65,9 +65,9 @@ public:
     }
 
 private:
-    void Convert(const std::string &outputFile);
-    void Align(const std::string &fromReference, const std::string &toReference,
-               std::string *fromReferenceAligned, std::string *toReferenceAligned);
+    void Convert(const std::string& outputFile);
+    void Align(const std::string& fromReference, const std::string& toReference,
+               std::string* fromReferenceAligned, std::string* toReferenceAligned);
 
 private:
     // clang-format off

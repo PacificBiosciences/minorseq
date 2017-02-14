@@ -57,8 +57,8 @@ public:
 class TargetGene
 {
 public:
-    TargetGene(const int begin, const int end, const std::string &name,
-               const std::vector<DRM> &drms);
+    TargetGene(const int begin, const int end, const std::string& name,
+               const std::vector<DRM>& drms);
     TargetGene() = default;
 
 public:
@@ -69,23 +69,23 @@ public:
 
 public:
     JSON::Json ToJson() const;
-    static JSON::Json ToJson(const std::vector<TargetGene> &genes);
+    static JSON::Json ToJson(const std::vector<TargetGene>& genes);
 };
 
 class TargetConfig
 {
 public:
     TargetConfig() = default;
-    TargetConfig(const std::string &input);
+    TargetConfig(const std::string& input);
 
 public:
     std::vector<TargetGene> targetGenes;
     std::string referenceSequence;
 
 private:
-    static std::string DetermineConfigInput(const std::string &input);
-    static std::string ReferenceSequenceFromJson(const JSON::Json &root);
-    static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json &root);
+    static std::string DetermineConfigInput(const std::string& input);
+    static std::string ReferenceSequenceFromJson(const JSON::Json& root);
+    static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json& root);
 
 private:
     static std::unordered_map<std::string, std::string> predefinedConfigs_;

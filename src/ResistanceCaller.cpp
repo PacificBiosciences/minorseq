@@ -59,10 +59,10 @@
 namespace PacBio {
 namespace Juliet {
 
-ResistanceCaller::ResistanceCaller(const Data::MSA &msa)
+ResistanceCaller::ResistanceCaller(const Data::MSA& msa)
     : msa_(msa), begin_(msa.beginPos), end_(msa.endPos)
 {
-    for (const auto &column : msa) {
+    for (const auto& column : msa) {
         std::vector<VariantNucleotide> nucs;
         for (int j = 0; j < 4; ++j) {
             char curNuc = Data::TagToNucleotide(j);
@@ -96,7 +96,7 @@ JSON::Json ResistanceCaller::JSON()
 
         const auto aminoRef = AminoacidRef(i);
 
-        auto SetNewGene = [&gene, &genes, &curGene, &geneOffset](const std::string &name,
+        auto SetNewGene = [&gene, &genes, &curGene, &geneOffset](const std::string& name,
                                                                  int begin) {
             gene = name;
             if (curGene.find("gene") != curGene.cend()) genes.push_back(std::move(curGene));
@@ -139,7 +139,7 @@ JSON::Json ResistanceCaller::JSON()
         std::vector<Json> variants;
         bool first = true;
         bool hit = false;
-        for (const auto &c : codons) {
+        for (const auto& c : codons) {
             const auto cc = CodonString(c);
             const auto a = codonToAmino_.at(cc);
             bool isKnown = resistantCodon_.find(i + 4) != resistantCodon_.cend();
@@ -176,7 +176,7 @@ JSON::Json ResistanceCaller::JSON()
             variantPosition["variants"] = variants;
         }
         std::vector<Json> insertions;
-        for (const auto &kv : msa_[i].insertionsPValues) {
+        for (const auto& kv : msa_[i].insertionsPValues) {
             if (kv.first.size() % 3 == 0) {
                 Json insertion;
                 insertion["nucleotides"] = kv.first;
@@ -197,10 +197,10 @@ JSON::Json ResistanceCaller::JSON()
     return j;
 }
 
-void ResistanceCaller::HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs,
+void ResistanceCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs,
                             bool details)
 {
-    auto strip = [](const std::string &input) -> std::string {
+    auto strip = [](const std::string& input) -> std::string {
         std::string s = input;
         s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
         return s;
@@ -269,7 +269,7 @@ tr:not(.msa):hover td { background-color: #ff5e5e; }
     out << "<body>" << std::endl;
 
     if (j.find("genes") == j.cend() || j["genes"].is_null()) return;
-    for (const auto &gene : j["genes"]) {
+    for (const auto& gene : j["genes"]) {
         out << "<table class=\"top\">" << std::endl;
         out << R"(
 <col width="60px"/>
@@ -311,7 +311,7 @@ tr:not(.msa):hover td { background-color: #ff5e5e; }
 <th colspan="1">DRM</th>
 </tr>)" << std::endl;
 
-        for (auto &variantPosition : gene["variant_positions"]) {
+        for (auto& variantPosition : gene["variant_positions"]) {
             std::stringstream line;
             const std::string refCodon = strip(variantPosition["ref_codon"]);
             line << "<tr class=\"var\">\n"
@@ -322,7 +322,7 @@ tr:not(.msa):hover td { background-color: #ff5e5e; }
             line.str("");
             bool first = true;
             if (variantPosition.find("insertions") != variantPosition.cend())
-                for (auto &insertion : variantPosition["insertions"]) {
+                for (auto& insertion : variantPosition["insertions"]) {
                     out << "<tr style=\"\">\n"
                         << "<td colspan=\"2\" style=\"background-color: "
                            "orange\">Insertion</td>\n"
@@ -338,7 +338,7 @@ tr:not(.msa):hover td { background-color: #ff5e5e; }
                         << strip(insertion["nucleotides"]) << "</td>"
                         << "</tr>";
                 }
-            for (auto &variant : variantPosition["variants"]) {
+            for (auto& variant : variantPosition["variants"]) {
                 bool isKnown = !strip(variant["known_drm"]).empty();
                 if ((onlyKnownDRMs && isKnown) || !onlyKnownDRMs) {
                     line << "<td>" << strip(variant["amino_acid"]) << "</td>\n";
@@ -410,7 +410,7 @@ tr:not(.msa):hover td { background-color: #ff5e5e; }
                     </tr>
                     )";
 
-                    for (auto &column : variant["msa_counts"]) {
+                    for (auto& column : variant["msa_counts"]) {
                         int relPos = column["rel_pos"];
                         out << "<tr><td>" << relPos << "</td>" << std::endl;
                         for (int j = 0; j < 5; ++j) {
@@ -447,13 +447,13 @@ double ResistanceCaller::MaxFrequency(std::vector<VariantNucleotide> codon)
 {
     double max = 0;
     for (int i = 0; i < 3; ++i) {
-        const auto &f = codon[i].frequency;
+        const auto& f = codon[i].frequency;
         if (f != 1 && f > max) max = f;
     }
     return max == 0 ? 1 : max;
 }
 
-void ResistanceCaller::AddPosition(std::vector<VariantNucleotide> &&nucs)
+void ResistanceCaller::AddPosition(std::vector<VariantNucleotide>&& nucs)
 {
     nucleotides_.emplace_back(std::forward<std::vector<VariantNucleotide>>(nucs));
 }
@@ -474,7 +474,7 @@ char ResistanceCaller::AminoacidRef(int hxb2Position) const
     return codonToAmino_.at(ref_.substr(hxb2Position, 3));
 }
 
-inline std::string ResistanceCaller::CodonString(const std::vector<VariantNucleotide> &codon) const
+inline std::string ResistanceCaller::CodonString(const std::vector<VariantNucleotide>& codon) const
 {
     std::stringstream ss;
     ss << codon[0].nucleotide << codon[1].nucleotide << codon[2].nucleotide;
@@ -485,9 +485,9 @@ std::vector<std::vector<VariantNucleotide>> ResistanceCaller::CreateCodons(
     const int hxb2Position) const
 {
     std::vector<std::vector<VariantNucleotide>> result;
-    for (const auto &i : nucleotides_.at(hxb2Position - begin_ + 0))
-        for (const auto &j : nucleotides_.at(hxb2Position - begin_ + 1))
-            for (const auto &k : nucleotides_.at(hxb2Position - begin_ + 2))
+    for (const auto& i : nucleotides_.at(hxb2Position - begin_ + 0))
+        for (const auto& j : nucleotides_.at(hxb2Position - begin_ + 1))
+            for (const auto& k : nucleotides_.at(hxb2Position - begin_ + 2))
                 result.push_back({{i, j, k}});
     return result;
 }

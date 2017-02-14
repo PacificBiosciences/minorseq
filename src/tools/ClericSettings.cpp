@@ -58,7 +58,7 @@ const PlainOption Output{
 // clang-format on
 }  // namespace OptionNames
 
-ClericSettings::ClericSettings(const PacBio::CLI::Results &options)
+ClericSettings::ClericSettings(const PacBio::CLI::Results& options)
     : InputFiles(options.PositionalArguments())
 {
     if (!options[OptionNames::Output].empty())

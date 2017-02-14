@@ -49,7 +49,7 @@ struct PariwiseAlignmentFasta
     std::string Transcript;
 };
 
-PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string &target,
-                                                 const std::string &query);
+PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string& target,
+                                                 const std::string& query);
 }  // namespace Align
 }  // namespace PacBio

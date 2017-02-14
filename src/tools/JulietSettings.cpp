@@ -108,7 +108,7 @@ const PlainOption TargetConfig{
 // clang-format on
 }  // namespace OptionNames
 
-JulietSettings::JulietSettings(const PacBio::CLI::Results &options)
+JulietSettings::JulietSettings(const PacBio::CLI::Results& options)
     : InputFiles(options.PositionalArguments())
     , OutputPrefix(std::forward<std::string>(options[OptionNames::Output]))
     , TargetConfigUser(std::forward<std::string>(options[OptionNames::TargetConfig]))
@@ -130,7 +130,7 @@ size_t JulietSettings::ThreadCount(int n)
     return std::min(m, n);
 }
 
-void JulietSettings::SplitRegion(const std::string &region, int *start, int *end)
+void JulietSettings::SplitRegion(const std::string& region, int* start, int* end)
 {
     if (region.compare("") != 0) {
         std::vector<std::string> splitVec;
@@ -141,7 +141,7 @@ void JulietSettings::SplitRegion(const std::string &region, int *start, int *end
     }
 }
 
-AnalysisMode JulietSettings::AnalysisModeFromString(const std::string &input)
+AnalysisMode JulietSettings::AnalysisModeFromString(const std::string& input)
 {
     std::string s = input;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);

@@ -51,7 +51,7 @@ namespace PacBio {
 namespace IO {
 
 /// \brief Wrapper around pbbam to ease BAM parsing and region extraction
-static std::vector<Data::ArrayRead> ParseBam(const std::string &filePath, int regionStart = 0,
+static std::vector<Data::ArrayRead> ParseBam(const std::string& filePath, int regionStart = 0,
                                              int regionEnd = std::numeric_limits<int>::max())
 {
     std::vector<Data::ArrayRead> returnList;
@@ -60,7 +60,7 @@ static std::vector<Data::ArrayRead> ParseBam(const std::string &filePath, int re
 
     int idx = 0;
     // Iterate over all records and convert online
-    for (auto &record : BAM::EntireFileQuery(filePath)) {
+    for (auto& record : BAM::EntireFileQuery(filePath)) {
         if (record.Impl().IsSupplementaryAlignment()) continue;
         if (record.ReferenceStart() < regionEnd && record.ReferenceEnd() > regionStart) {
             record.Clip(BAM::ClipType::CLIP_TO_REFERENCE, regionStart, regionEnd);

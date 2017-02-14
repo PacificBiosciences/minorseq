@@ -65,7 +65,7 @@ const PlainOption Output{
 // clang-format on
 }  // namespace OptionNames
 
-FuseSettings::FuseSettings(const PacBio::CLI::Results &options)
+FuseSettings::FuseSettings(const PacBio::CLI::Results& options)
     : InputFiles(options.PositionalArguments())
 {
     if (!options[OptionNames::Output].empty())
@@ -82,7 +82,7 @@ size_t FuseSettings::ThreadCount(int n)
     return std::min(m, n);
 }
 
-void FuseSettings::SplitRegion(const std::string &region, int *start, int *end)
+void FuseSettings::SplitRegion(const std::string& region, int* start, int* end)
 {
     if (region.compare("") != 0) {
         std::vector<std::string> splitVec;

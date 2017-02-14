@@ -43,8 +43,8 @@
 
 namespace PacBio {
 namespace Cleric {
-void Cleric::Align(const std::string &fromReference, const std::string &toReference,
-                   std::string *fromReferenceAligned, std::string *toReferenceAligned)
+void Cleric::Align(const std::string& fromReference, const std::string& toReference,
+                   std::string* fromReferenceAligned, std::string* toReferenceAligned)
 {
     auto align = Align::SimdNeedleWunschAlignment(fromReference, toReference);
 
@@ -52,7 +52,7 @@ void Cleric::Align(const std::string &fromReference, const std::string &toRefere
     *toReferenceAligned = align.Query;
 }
 
-void Cleric::Convert(const std::string &outputFile)
+void Cleric::Convert(const std::string& outputFile)
 {
     using namespace PacBio::BAM;
 
@@ -65,7 +65,7 @@ void Cleric::Convert(const std::string &outputFile)
     if (localFromReferenceName != fromReferenceName_)
         throw std::runtime_error("Internal error. Reference name mismatches");
 
-    const auto RemoveGaps = [](const std::string &input) {
+    const auto RemoveGaps = [](const std::string& input) {
         std::string seq = input;
         seq.erase(std::remove(seq.begin(), seq.end(), '-'), seq.end());
         return seq;
@@ -73,7 +73,7 @@ void Cleric::Convert(const std::string &outputFile)
     toReferenceGapless_ = RemoveGaps(toReferenceSequence_);
     fromReferenceGapless_ = RemoveGaps(fromReferenceSequence_);
 
-    const auto GetGaplessMapping = [](const std::string &refBases, std::map<int, int> *map) {
+    const auto GetGaplessMapping = [](const std::string& refBases, std::map<int, int>* map) {
         int pos = 0;
         for (size_t i = 0; i < refBases.size(); ++i) {
             if (refBases.at(i) != '-') {
@@ -100,7 +100,7 @@ void Cleric::Convert(const std::string &outputFile)
 
         // Expand RLE cigar to flat vector
         std::string expanded_cigar_ops;
-        for (const auto &c : read.CigarData(false))
+        for (const auto& c : read.CigarData(false))
             for (size_t i = 0; i < c.Length(); ++i)
                 expanded_cigar_ops += c.Char();
         expanded_cigar_ops += "YZ";
@@ -673,7 +673,7 @@ void Cleric::Convert(const std::string &outputFile)
         };
 
         int tlen = 0;
-        for (const auto &op : new_cigar_tuple) {
+        for (const auto& op : new_cigar_tuple) {
             const CigarOperationType cigar_op = op.Type();
             const int cigar_op_count = op.Length();
 

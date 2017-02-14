@@ -49,10 +49,10 @@ class JulietWorkflow
 {
 public:
     /// Execute the complete Juliet workflow
-    void Run(const JulietSettings &settings);
+    void Run(const JulietSettings& settings);
 
 private:
-    std::ostream &LogCI(const std::string &prefix);
+    std::ostream& LogCI(const std::string& prefix);
 };
 }
 }  // ::PacBio::Juliet

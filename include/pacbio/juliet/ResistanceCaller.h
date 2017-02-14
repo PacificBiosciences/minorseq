@@ -80,7 +80,7 @@ class ResistanceCaller
 {
 public:
     /// Constructor needs a multiple sequence alignment.
-    ResistanceCaller(const Data::MSA &msa);
+    ResistanceCaller(const Data::MSA& msa);
 
 public:
     /// Generate JSON output of variant amino acids
@@ -88,15 +88,15 @@ public:
 
 public:
     /// Generate pretty print output of variant amino acids
-    static void Print(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
+    static void Print(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
 
     /// Generate HTML output of variant amino acids
-    static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
+    static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
 
 private:
     double MaxFrequency(std::vector<VariantNucleotide> codon);
 
-    void AddPosition(std::vector<VariantNucleotide> &&nucs);
+    void AddPosition(std::vector<VariantNucleotide>&& nucs);
 
     inline char Ref(int i) const { return ref_[i]; }
 
@@ -104,7 +104,7 @@ private:
 
     char AminoacidRef(int hxb2Position) const;
 
-    inline std::string CodonString(const std::vector<VariantNucleotide> &codon) const;
+    inline std::string CodonString(const std::vector<VariantNucleotide>& codon) const;
 
     std::vector<std::vector<VariantNucleotide>> CreateCodons(const int hxb2Position) const;
 

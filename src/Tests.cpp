@@ -46,7 +46,7 @@
 
 namespace PacBio {
 namespace Statistics {
-std::map<std::string, double> Tests::FisherCCS(const std::array<int, 5> &observed,
+std::map<std::string, double> Tests::FisherCCS(const std::array<int, 5>& observed,
                                                const std::map<std::string, int> insertions)
 {
     int argMax = 0;
@@ -54,7 +54,7 @@ std::map<std::string, double> Tests::FisherCCS(const std::array<int, 5> &observe
     const auto pml = CalculatePml(observed, &argMax, &sum);
 
     std::map<std::string, double> results;
-    for (const auto &kv : insertions) {
+    for (const auto& kv : insertions) {
         const double p = Fisher::fisher_exact_tiss(kv.second + 1, sum, 0.0084 / 4.0 * sum, sum);
         if (p < alpha) results.insert({kv.first, p});
     }
@@ -62,7 +62,7 @@ std::map<std::string, double> Tests::FisherCCS(const std::array<int, 5> &observe
     return results;
 }
 
-Data::FisherResult Tests::FisherCCS(const std::array<int, 5> &observed)
+Data::FisherResult Tests::FisherCCS(const std::array<int, 5>& observed)
 {
     int argMax = 0;
     double sum = 0;
@@ -93,20 +93,20 @@ Data::FisherResult Tests::FisherCCS(const std::array<int, 5> &observed)
     return fr;
 }
 
-std::array<double, 5> Tests::CalculatePml(const std::array<int, 5> &observed, int *argMax,
-                                          double *sum)
+std::array<double, 5> Tests::CalculatePml(const std::array<int, 5>& observed, int* argMax,
+                                          double* sum)
 {
     std::array<double, 5> pml;
     std::copy_n(observed.cbegin(), 5, pml.begin());
 
     // +1 each entry
-    std::for_each(pml.begin(), pml.end(), [](double &p) { ++p; });
+    std::for_each(pml.begin(), pml.end(), [](double& p) { ++p; });
 
     *argMax = std::distance(pml.cbegin(), std::max_element(pml.cbegin(), pml.cend()));
     *sum = std::accumulate(pml.cbegin(), pml.cend(), 0.0);
 
     // normalize
-    std::for_each(pml.begin(), pml.end(), [&sum](double &p) { p /= (*sum); });
+    std::for_each(pml.begin(), pml.end(), [&sum](double& p) { p /= (*sum); });
     return pml;
 }
 
@@ -117,7 +117,7 @@ std::array<double, 5> Tests::CalculatePriors(const int argMax)
     std::array<double, 5> pMatch{{0.0005, 0.0005, 0.0005, 0.0005, 0.0029}};
     pMatch[argMax] = 0.9872;
     double pMatchSum = pMatch[0] + pMatch[1] + pMatch[2] + pMatch[3] + pMatch[4];
-    for (auto &p : pMatch)
+    for (auto& p : pMatch)
         p /= pMatchSum;
 
     return pMatch;

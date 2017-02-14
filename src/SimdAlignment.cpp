@@ -47,8 +47,8 @@
 
 namespace PacBio {
 namespace Align {
-PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string &target,
-                                                 const std::string &query)
+PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string& target,
+                                                 const std::string& query)
 {
     StripedSmithWaterman::Aligner aligner;
     StripedSmithWaterman::Filter filter;
@@ -67,7 +67,7 @@ PariwiseAlignmentFasta SimdNeedleWunschAlignment(const std::string &target,
         qryAlign += "-";
         transcript += "P";
     }
-    for (const auto &c : BAM::Cigar::FromStdString(alignment.cigar_string)) {
+    for (const auto& c : BAM::Cigar::FromStdString(alignment.cigar_string)) {
         for (size_t i = 0; i < c.Length(); ++i) {
             transcript += c.Char();
 

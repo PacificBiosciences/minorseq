@@ -53,7 +53,7 @@ struct ClericSettings
     std::string OutputPrefix;
 
     /// Parses the provided CLI::Results and retrieves a defined set of options.
-    ClericSettings(const PacBio::CLI::Results &options);
+    ClericSettings(const PacBio::CLI::Results& options);
 
     /// Given the description of the tool and its version, create all
     /// necessary CLI::Options for the ccs executable.

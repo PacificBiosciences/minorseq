@@ -65,13 +65,13 @@
 namespace PacBio {
 namespace Juliet {
 
-std::ostream &JulietWorkflow::LogCI(const std::string &prefix)
+std::ostream& JulietWorkflow::LogCI(const std::string& prefix)
 {
     std::cout << std::setw(20) << std::left << prefix << ": ";
     return std::cout;
 }
 
-void JulietWorkflow::Run(const JulietSettings &settings)
+void JulietWorkflow::Run(const JulietSettings& settings)
 {
     using Utility::FilePrefix;
 
@@ -80,7 +80,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
 
     if (settings.Mode == AnalysisMode::BASE) {
         std::unordered_map<std::string, JSON::Json> jsonResults;
-        for (const auto &inputFile : settings.InputFiles) {
+        for (const auto& inputFile : settings.InputFiles) {
             const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
             // Convert BamRecords to unrolled ArrayReads
@@ -90,7 +90,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
             Data::MSA msa(reads);
 
             // Compute fisher's exact test for each position
-            for (auto &column : msa) {
+            for (auto& column : msa) {
                 column.AddFisherResult(Statistics::Tests::FisherCCS(column));
                 column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
             }
@@ -100,7 +100,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
                 std::ofstream msaStream(outputPrefix + ".msa");
                 msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
                 int pos = msa.beginPos;
-                for (auto &column : msa)
+                for (auto& column : msa)
                     msaStream << ++pos << " " << column << std::endl;
                 msaStream.close();
             }
@@ -115,7 +115,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
             ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
         }
     } else if (settings.Mode == AnalysisMode::AMINO) {
-        for (const auto &inputFile : settings.InputFiles) {
+        for (const auto& inputFile : settings.InputFiles) {
             const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
             ErrorEstimates error;
@@ -125,7 +125,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
                 std::string chemistry;
                 const BAM::BamReader bamReader(inputFile);
                 const auto readGroups = bamReader.Header().ReadGroups();
-                for (const auto &rg : readGroups) {
+                for (const auto& rg : readGroups) {
                     if (chemistry.empty())
                         chemistry = rg.SequencingChemistry();
                     else if (chemistry != rg.SequencingChemistry())
@@ -153,10 +153,10 @@ void JulietWorkflow::Run(const JulietSettings &settings)
                 std::ofstream msaStream(outputPrefix + ".msa");
                 msaStream << "pos A C G T N" << std::endl;
                 int pos = aac.msa_->beginPos;
-                for (auto &column : *aac.msa_) {
+                for (auto& column : *aac.msa_) {
                     msaStream << ++pos;
-                    const std::array<int, 5> &counts = column;
-                    for (const auto &c : counts)
+                    const std::array<int, 5>& counts = column;
+                    for (const auto& c : counts)
                         msaStream << " " << c;
                     msaStream << std::endl;
                 }
@@ -164,7 +164,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
             }
         }
     } else if (settings.Mode == AnalysisMode::PHASING) {
-        for (const auto &inputFile : settings.InputFiles) {
+        for (const auto& inputFile : settings.InputFiles) {
             const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
             // Convert BamRecords to unrolled ArrayReads
@@ -174,7 +174,7 @@ void JulietWorkflow::Run(const JulietSettings &settings)
             Data::MSA msa(reads);
 
             // Compute fisher's exact test for each position
-            for (auto &column : msa) {
+            for (auto& column : msa) {
                 column.AddFisherResult(Statistics::Tests::FisherCCS(column));
                 column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
             }
@@ -182,14 +182,14 @@ void JulietWorkflow::Run(const JulietSettings &settings)
             Data::MSA msaWithPrior(reads, msa);
         }
     } else if (settings.Mode == AnalysisMode::ERROR) {
-        for (const auto &inputFile : settings.InputFiles) {
+        for (const auto& inputFile : settings.InputFiles) {
             std::vector<Data::ArrayRead> reads;
             reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
             Data::MSA msa(reads);
             double sub = 0;
             double del = 0;
             int columnCount = 0;
-            for (const auto &column : msa) {
+            for (const auto& column : msa) {
                 if (column.Coverage() > 100) {
                     del += column.Frequency(4);
                     sub += 1.0 - column.Frequency(4) - column.Frequency(column.MaxElement());

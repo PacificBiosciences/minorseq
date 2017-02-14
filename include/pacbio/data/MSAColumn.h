@@ -56,9 +56,9 @@ public:
 
     // Nucleotide counts
     int operator[](int i) const { return counts[i]; }
-    int &operator[](int i) { return counts[i]; }
+    int& operator[](int i) { return counts[i]; }
     int operator[](char c) const { return counts[NucleotideToTag(c)]; }
-    int &operator[](char c) { return counts[NucleotideToTag(c)]; }
+    int& operator[](char c) { return counts[NucleotideToTag(c)]; }
 
     operator std::array<int, 5>() { return counts; }
     explicit operator int() { return Coverage(); }
@@ -70,14 +70,14 @@ public:
     int Max() const;
 
 public:
-    void AddFisherResult(const FisherResult &f);
-    void AddFisherResult(const std::map<std::string, double> &f);
+    void AddFisherResult(const FisherResult& f);
+    void AddFisherResult(const std::map<std::string, double>& f);
 
-    std::ostream &InDels(std::ostream &stream)
+    std::ostream& InDels(std::ostream& stream)
     {
         stream << refPos << "\t";
         if (mask.at(4) == 1) stream << "(-," << counts.at(4) << "," << pValues.at(4) << ")\t";
-        for (const auto &bases_pvalue : insertionsPValues)
+        for (const auto& bases_pvalue : insertionsPValues)
             if (bases_pvalue.second < 0.01)
                 stream << "(" << bases_pvalue.first << "," << insertions.at(bases_pvalue.first)
                        << "," << bases_pvalue.second << ")\t";
@@ -88,7 +88,7 @@ public:
     std::vector<std::string> SignificantInsertions() const
     {
         std::vector<std::string> results;
-        for (const auto &bases_pvalue : insertionsPValues)
+        for (const auto& bases_pvalue : insertionsPValues)
             if (bases_pvalue.second < 0.01) results.push_back(bases_pvalue.first);
         return results;
     }
@@ -104,7 +104,7 @@ public:
     int argMax = 0;
 
 public:
-    friend std::ostream &operator<<(std::ostream &stream, const MSAColumn &r)
+    friend std::ostream& operator<<(std::ostream& stream, const MSAColumn& r)
     {
         for (int j = 0; j < 5; ++j)
             stream << r.counts.at(j) << "\t" << r.pValues.at(j) << "\t";

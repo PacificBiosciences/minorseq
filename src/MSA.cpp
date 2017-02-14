@@ -45,11 +45,11 @@
 
 namespace PacBio {
 namespace Data {
-MSA::MSA(const std::vector<Data::ArrayRead> &reads)
+MSA::MSA(const std::vector<Data::ArrayRead>& reads)
     : MSA(reads, boost::none, boost::none, boost::none, boost::none)
 {
 }
-MSA::MSA(const std::vector<Data::ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+MSA::MSA(const std::vector<Data::ArrayRead>& reads, const boost::optional<uint8_t> qualQv,
          const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
          const boost::optional<uint8_t> insQv)
 {
@@ -57,39 +57,39 @@ MSA::MSA(const std::vector<Data::ArrayRead> &reads, const boost::optional<uint8_
     // Fill counts
     FillCounts(reads, qualQv, delQv, subQv, insQv);
 }
-MSA::MSA(const std::vector<Data::ArrayRead> &reads, const MSA &prior)
+MSA::MSA(const std::vector<Data::ArrayRead>& reads, const MSA& prior)
 {
     BeginEnd(reads);
     // Fill counts
     FillCounts(reads, prior);
 }
 
-void MSA::BeginEnd(const std::vector<Data::ArrayRead> &reads)
+void MSA::BeginEnd(const std::vector<Data::ArrayRead>& reads)
 {
     // Determine left- and right-most positions
-    for (const auto &r : reads) {
+    for (const auto& r : reads) {
         beginPos = std::min(beginPos, r.ReferenceStart());
         endPos = std::max(endPos, r.ReferenceEnd());
     }
 }
 
-void MSA::FillCounts(const std::vector<ArrayRead> &reads)
+void MSA::FillCounts(const std::vector<ArrayRead>& reads)
 {
     FillCounts(reads, boost::none, boost::none, boost::none, boost::none);
 }
 
-void MSA::FillCounts(const std::vector<ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+void MSA::FillCounts(const std::vector<ArrayRead>& reads, const boost::optional<uint8_t> qualQv,
                      const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
                      const boost::optional<uint8_t> insQv)
 {
     // Prepare 2D array for counts
     counts.resize(endPos - beginPos);
     int pos = beginPos;
-    for (auto &c : counts)
+    for (auto& c : counts)
         c.refPos = ++pos;  // output is 1-based, input is 0-based
 
     // Fill in counts
-    for (const auto &r : reads) {
+    for (const auto& r : reads) {
         int pos = r.ReferenceStart() - beginPos;
         assert(pos >= 0);
         std::string insertion;
@@ -98,7 +98,7 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const boost::optional<
             counts[pos].insertions[insertion]++;
             insertion = "";
         };
-        for (const auto &b : r.Bases) {
+        for (const auto& b : r.Bases) {
             switch (b.Cigar) {
                 case 'X':
                 case '=':
@@ -131,19 +131,19 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const boost::optional<
     }
 }
 
-void MSA::FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior)
+void MSA::FillCounts(const std::vector<ArrayRead>& reads, const MSA& prior)
 {
     // Prepare 2D array for counts
     counts.resize(endPos - beginPos);
     {
         int pos = beginPos;
-        for (auto &c : counts)
+        for (auto& c : counts)
             c.refPos = pos++;
     }
 
     struct InDel
     {
-        InDel(const MSAColumn &c)
+        InDel(const MSAColumn& c)
             : refPos(c.refPos), deletion(c.mask.at(4)), insertions(c.SignificantInsertions())
         {
         }
@@ -154,16 +154,16 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior)
         std::vector<std::string> insertions;
     };
     std::vector<InDel> indels;
-    for (auto &column : prior)
+    for (auto& column : prior)
         indels.emplace_back(column);
 
-    for (const auto &id : indels)
+    for (const auto& id : indels)
         if (id.deletion) std::cerr << id.refPos << " " << id.deletion << std::endl;
 
     std::map<int, int> offsets;
     std::map<int, int> delMap;
     // Fill in counts
-    for (const auto &r : reads) {
+    for (const auto& r : reads) {
         int pos = r.ReferenceStart() - beginPos;
         assert(pos >= 0);
 
@@ -174,7 +174,7 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior)
         auto CheckInsertion = [&insertion, &indels, &indelOffset, this, &pos]() {
             if (insertion.empty()) return;
             if (pos < static_cast<int>(indels.size())) {
-                const auto &insertions = indels.at(pos).insertions;
+                const auto& insertions = indels.at(pos).insertions;
                 if (std::find(insertions.cbegin(), insertions.cend(), insertion) !=
                     insertions.cend()) {
                     if (insertion.size() % 3 != 0) indelOffset += insertion.size();
@@ -195,7 +195,7 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior)
         };
 
         for (size_t i = 0; i < r.Bases.size(); ++i) {
-            const auto &b = r.Bases.at(i);
+            const auto& b = r.Bases.at(i);
             bool hasFullCodonFollowing = (i + 2) < r.Bases.size();
             switch (b.Cigar) {
                 case 'X':
@@ -275,10 +275,10 @@ void MSA::FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior)
         // }
     }
     std::cerr << "del" << std::endl;
-    for (const auto &pos_count : delMap)
+    for (const auto& pos_count : delMap)
         std::cerr << pos_count.first << " - " << pos_count.second << std::endl;
     std::cerr << "offsets" << std::endl;
-    for (const auto &offset_count : offsets)
+    for (const auto& offset_count : offsets)
         std::cerr << offset_count.first << " - " << offset_count.second << std::endl;
 }
 }  // namespace Data

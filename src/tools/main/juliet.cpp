@@ -48,7 +48,7 @@
 namespace {
 using namespace PacBio::Juliet;
 
-static int Runner(const PacBio::CLI::Results &options)
+static int Runner(const PacBio::CLI::Results& options)
 {
     // Check args size, as pbcopper does not enforce the correct number
     if (options.PositionalArguments().empty()) {
@@ -66,7 +66,7 @@ static int Runner(const PacBio::CLI::Results &options)
 };
 
 // Entry point
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     return PacBio::CLI::Run(argc, argv, JulietSettings::CreateCLI(), &Runner);
 }

@@ -50,7 +50,7 @@ class ErrorEstimates
 {
 public:
     ErrorEstimates() = default;
-    ErrorEstimates(const std::string &chemistry);
+    ErrorEstimates(const std::string& chemistry);
     ErrorEstimates(const double substitutionRate, const double deletionRate);
 
     double match = -1;
@@ -58,7 +58,7 @@ public:
     double deletion = -1;
     double insertion = -1;
 
-    friend std::ostream &operator<<(std::ostream &stream, const ErrorEstimates &r)
+    friend std::ostream& operator<<(std::ostream& stream, const ErrorEstimates& r)
     {
         stream << "match:" << r.match << "\tsubstitution:" << r.substitution
                << "\tdeletion:" << r.deletion << "\tinsertion:" << r.insertion;

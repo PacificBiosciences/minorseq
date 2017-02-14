@@ -88,7 +88,7 @@ struct VariantGene
         Json root;
         root["name"] = geneName;
         std::vector<Json> positions;
-        for (const auto &pos_variant : relPositionToVariant) {
+        for (const auto& pos_variant : relPositionToVariant) {
             Json jVarPos;
             jVarPos["ref_position"] = pos_variant.first;
             jVarPos["ref_codon"] = pos_variant.second.refCodon;
@@ -97,13 +97,13 @@ struct VariantGene
 
             if (pos_variant.second.aminoAcidToCodons.empty()) continue;
             std::vector<Json> jVarAAs;
-            for (const auto &aa_varCodon : pos_variant.second.aminoAcidToCodons) {
+            for (const auto& aa_varCodon : pos_variant.second.aminoAcidToCodons) {
                 Json jVarAA;
                 jVarAA["amino_acid"] = std::string(1, aa_varCodon.first);
                 std::vector<Json> jCodons;
 
                 if (aa_varCodon.second.empty()) continue;
-                for (const auto &codon : aa_varCodon.second) {
+                for (const auto& codon : aa_varCodon.second) {
                     Json jCodon;
                     jCodon["codon"] = codon.codon;
                     jCodon["frequency"] = codon.frequency;
@@ -130,8 +130,8 @@ struct VariantGene
 class AminoAcidCaller
 {
 public:
-    AminoAcidCaller(const std::vector<Data::ArrayRead> &reads, const ErrorEstimates &error,
-                    const TargetConfig &targetConfig);
+    AminoAcidCaller(const std::vector<Data::ArrayRead>& reads, const ErrorEstimates& error,
+                    const TargetConfig& targetConfig);
 
 public:
     /// Generate JSON output of variant amino acids
@@ -139,17 +139,17 @@ public:
 
 public:
     /// Generate HTML output of variant amino acids
-    static void HTML(std::ostream &out, const JSON::Json &j, bool onlyKnownDRMs, bool details);
+    static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
 
 public:
     std::unique_ptr<Data::MSA> msa_;
 
 private:
     static constexpr float alpha = 0.01;
-    void GenerateMSA(const std::vector<Data::ArrayRead> &reads);
-    void CallVariants(const std::vector<Data::ArrayRead> &reads);
-    int CountNumberOfTests(const std::vector<TargetGene> &genes) const;
-    std::string FindDRMs(const std::string &geneName, const std::vector<TargetGene> &genes,
+    void GenerateMSA(const std::vector<Data::ArrayRead>& reads);
+    void CallVariants(const std::vector<Data::ArrayRead>& reads);
+    int CountNumberOfTests(const std::vector<TargetGene>& genes) const;
+    std::string FindDRMs(const std::string& geneName, const std::vector<TargetGene>& genes,
                          const int position) const;
 
 private:

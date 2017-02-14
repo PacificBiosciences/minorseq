@@ -57,17 +57,17 @@ public:
     using MsaItConst = MsaVec::const_iterator;
 
 public:
-    MSA(const std::vector<Data::ArrayRead> &reads);
-    MSA(const std::vector<Data::ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+    MSA(const std::vector<Data::ArrayRead>& reads);
+    MSA(const std::vector<Data::ArrayRead>& reads, const boost::optional<uint8_t> qualQv,
         const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
         const boost::optional<uint8_t> insQv);
-    MSA(const std::vector<Data::ArrayRead> &reads, const MSA &prior);
+    MSA(const std::vector<Data::ArrayRead>& reads, const MSA& prior);
 
 public:
     /// Parameter is an index in ABSOLUTE reference space
     MSAColumn operator[](int i) const { return counts[i - beginPos]; }
     /// Parameter is an index in ABSOLUTE reference space
-    MSAColumn &operator[](int i) { return counts[i - beginPos]; }
+    MSAColumn& operator[](int i) { return counts[i - beginPos]; }
 
     bool has(int i) { return i >= beginPos && i < endPos; }
 
@@ -86,12 +86,12 @@ public:
     int endPos = 0;
 
 private:
-    void BeginEnd(const std::vector<Data::ArrayRead> &reads);
-    void FillCounts(const std::vector<ArrayRead> &reads);
-    void FillCounts(const std::vector<ArrayRead> &reads, const boost::optional<uint8_t> qualQv,
+    void BeginEnd(const std::vector<Data::ArrayRead>& reads);
+    void FillCounts(const std::vector<ArrayRead>& reads);
+    void FillCounts(const std::vector<ArrayRead>& reads, const boost::optional<uint8_t> qualQv,
                     const boost::optional<uint8_t> delQv, const boost::optional<uint8_t> subQv,
                     const boost::optional<uint8_t> insQv);
-    void FillCounts(const std::vector<ArrayRead> &reads, const MSA &prior);
+    void FillCounts(const std::vector<ArrayRead>& reads, const MSA& prior);
 };
 }  // namespace Data
 }  // namespace PacBio

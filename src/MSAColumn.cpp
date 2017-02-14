@@ -56,7 +56,7 @@ char MSAColumn::MaxBase() const
 }
 int MSAColumn::Max() const { return counts.at(MaxElement()); }
 
-void MSAColumn::AddFisherResult(const FisherResult &f)
+void MSAColumn::AddFisherResult(const FisherResult& f)
 {
     pValues = f.pValues;
     mask = f.mask;
@@ -64,7 +64,7 @@ void MSAColumn::AddFisherResult(const FisherResult &f)
     argMax = f.argMax;
 }
 
-void MSAColumn::AddFisherResult(const std::map<std::string, double> &f) { insertionsPValues = f; }
+void MSAColumn::AddFisherResult(const std::map<std::string, double>& f) { insertionsPValues = f; }
 
 }  // namespace Data
 }  // namespace PacBio
