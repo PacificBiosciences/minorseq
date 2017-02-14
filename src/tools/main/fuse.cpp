@@ -42,10 +42,10 @@
 #include <vector>
 
 #include <pbcopper/cli/CLI.h>
+#include <pbcopper/utility/FileUtils.h>
 
 #include <pacbio/fuse/Fuse.h>
 #include <pacbio/fuse/FuseSettings.h>
-#include <pacbio/io/Utility.h>
 
 namespace {
 using namespace PacBio::Fuse;
@@ -62,7 +62,7 @@ static int Runner(const PacBio::CLI::Results &options) {
   // if (settings.OutputPrefix)
   for (const auto &input : options.PositionalArguments()) {
     Fuse fuse(input);
-    std::string outputFileName = PacBio::IO::FilePrefix(input) + ".cons";
+    std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";
     if (!settings.OutputPrefix.empty()) {
       std::string infix;
       if (settings.OutputPrefix.back() != '/')

@@ -45,18 +45,20 @@
 #include <numeric>
 #include <vector>
 
+#include <pbbam/BamReader.h>
+#include <pbbam/BamRecord.h>
+
+#include <pbcopper/json/JSON.h>
+#include <pbcopper/utility/FileUtils.h>
+
 #include <pacbio/data/ArrayRead.h>
 #include <pacbio/data/MSA.h>
 #include <pacbio/io/BamParser.h>
-#include <pacbio/io/Utility.h>
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/juliet/JulietSettings.h>
 #include <pacbio/juliet/ResistanceCaller.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pacbio/statistics/Tests.h>
-#include <pbbam/BamReader.h>
-#include <pbbam/BamRecord.h>
-#include <pbcopper/json/JSON.h>
 
 #include <pacbio/juliet/JulietWorkflow.h>
 
@@ -69,13 +71,15 @@ std::ostream &JulietWorkflow::LogCI(const std::string &prefix) {
 }
 
 void JulietWorkflow::Run(const JulietSettings &settings) {
+  using Utility::FilePrefix;
+
   auto globalOutputPrefix = settings.OutputPrefix;
   globalOutputPrefix += globalOutputPrefix.empty() ? "" : "/";
 
   if (settings.Mode == AnalysisMode::BASE) {
     std::unordered_map<std::string, JSON::Json> jsonResults;
     for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + IO::FilePrefix(inputFile);
+      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
       // Convert BamRecords to unrolled ArrayReads
       std::vector<Data::ArrayRead> reads;
@@ -102,7 +106,7 @@ void JulietWorkflow::Run(const JulietSettings &settings) {
       ResistanceCaller resiCaller(msa);
 
       const auto json = resiCaller.JSON();
-      jsonResults.insert({IO::FilePrefix(inputFile), json});
+      jsonResults.insert({FilePrefix(inputFile), json});
       std::ofstream jsonStream(outputPrefix + ".json");
       jsonStream << json.dump(2) << std::endl;
 
@@ -112,7 +116,7 @@ void JulietWorkflow::Run(const JulietSettings &settings) {
     }
   } else if (settings.Mode == AnalysisMode::AMINO) {
     for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + IO::FilePrefix(inputFile);
+      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
       ErrorEstimates error;
       if (settings.SubstitutionRate != 0.0 && settings.DeletionRate != 0.0) {
@@ -163,7 +167,7 @@ void JulietWorkflow::Run(const JulietSettings &settings) {
     }
   } else if (settings.Mode == AnalysisMode::PHASING) {
     for (const auto &inputFile : settings.InputFiles) {
-      const auto outputPrefix = globalOutputPrefix + IO::FilePrefix(inputFile);
+      const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
       // Convert BamRecords to unrolled ArrayReads
       std::vector<Data::ArrayRead> reads;
