@@ -77,18 +77,21 @@ public:
     /// Generate HTML output of variant amino acids
     static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
 
-public:
-    std::unique_ptr<Data::MSAByColumn> msa_;
-
 private:
     static constexpr float alpha = 0.01;
+    void PhaseVariants();
     void CallVariants();
     int CountNumberOfTests(const std::vector<TargetGene>& genes) const;
     std::string FindDRMs(const std::string& geneName, const std::vector<TargetGene>& genes,
                          const int position) const;
 
 private:
-    Data::MSAByRow nucMatrix_;
+    Data::MSAByRow msaByRow_;
+
+public:
+    Data::MSAByColumn msaByColumn_;
+
+private:
     std::vector<VariantGene> variantGenes_;
     const ErrorEstimates error_;
     const TargetConfig targetConfig_;

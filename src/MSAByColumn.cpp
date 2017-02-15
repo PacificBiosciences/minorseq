@@ -55,7 +55,7 @@ MSAByColumn::MSAByColumn(const MSAByRow& msaRows)
     for (auto& c : counts)
         c.refPos = pos++;
 
-    for (const auto& row : msaRows.Matrix) {
+    for (const auto& row : msaRows.Rows) {
         int localPos = 0;
         for (const auto& c : row.Bases) {
             switch (c) {

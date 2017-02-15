@@ -101,7 +101,7 @@ static constexpr uint8_t NucleotideToTag(char t)
 class ArrayRead
 {
 public:  // ctors
-    ArrayRead(int idx = -1);
+    ArrayRead(const int idx = -1, const std::string& name = "");
 
     // friend std::ostream& operator<<(std::ostream& stream, const ArrayRead& r);
 
@@ -124,6 +124,7 @@ public:
 public:  // data
     std::vector<ArrayBase> Bases;
     const int Idx;
+    const std::string Name;
 
 protected:
     size_t referenceStart_;

@@ -59,8 +59,11 @@ struct MSAByRow
         for (const auto& r : reads)
             BeginEnd(*r);
 
-        for (const auto& r : reads)
-            AddRead(*r);
+        for (const auto& r : reads) {
+            auto row = AddRead(*r);
+            row.Read = r;
+            Rows.emplace_back(std::move(row));
+        }
 
         BeginPos += 1;
         EndPos += 1;
@@ -72,7 +75,7 @@ struct MSAByRow
             BeginEnd(r);
 
         for (const auto& r : reads)
-            AddRead(r);
+            Rows.emplace_back(AddRead(r));
 
         BeginPos += 1;
         EndPos += 1;
@@ -84,7 +87,7 @@ struct MSAByRow
         EndPos = std::max(EndPos, read.ReferenceEnd());
     }
 
-    void AddRead(const Data::ArrayRead& read)
+    MSARow AddRead(const Data::ArrayRead& read)
     {
         MSARow row(EndPos - BeginPos);
 
@@ -125,13 +128,13 @@ struct MSAByRow
                     throw std::runtime_error("Unexpected cigar " + std::to_string(b.Cigar));
             }
         }
-        Matrix.emplace_back(row);
+        return row;
     }
 
     const Data::QvThresholds qvThresholds;
     int BeginPos = std::numeric_limits<int>::max();
     int EndPos = 0;
-    std::vector<MSARow> Matrix;
+    std::vector<MSARow> Rows;
 };
 }
 }  // ::PacBio::Juliet

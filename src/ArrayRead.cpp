@@ -51,10 +51,11 @@
 namespace PacBio {
 namespace Data {
 
-ArrayRead::ArrayRead(int idx) : Idx(idx){};
+ArrayRead::ArrayRead(const int idx, const std::string& name) : Idx(idx), Name(name){};
 
 BAMArrayRead::BAMArrayRead(const BAM::BamRecord& record, int idx)
-    : ArrayRead(idx), Record(record)  // Record(std::forward<BAM::BamRecord>(record))
+    : ArrayRead(idx, record.FullName())
+    , Record(record)  // Record(std::forward<BAM::BamRecord>(record))
 {
     ArrayRead::referenceStart_ = record.ReferenceStart();
     ArrayRead::referenceEnd_ = record.ReferenceEnd();
