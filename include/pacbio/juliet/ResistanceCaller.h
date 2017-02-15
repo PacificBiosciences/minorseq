@@ -51,7 +51,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pacbio/data/MSA.h>
+#include <pacbio/data/MSAByColumn.h>
 #include <pbcopper/json/JSON.h>
 
 #undef major  // gcc hack
@@ -80,7 +80,7 @@ class ResistanceCaller
 {
 public:
     /// Constructor needs a multiple sequence alignment.
-    ResistanceCaller(const Data::MSA& msa);
+    ResistanceCaller(const Data::MSAByColumn& msa);
 
 public:
     /// Generate JSON output of variant amino acids
@@ -109,7 +109,7 @@ private:
     std::vector<std::vector<VariantNucleotide>> CreateCodons(const int hxb2Position) const;
 
 private:
-    Data::MSA msa_;
+    Data::MSAByColumn msa_;
     std::vector<std::vector<VariantNucleotide>> nucleotides_;
     int begin_;
     int end_;

@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include <pacbio/data/MSA.h>
+#include <pacbio/data/MSAByColumn.h>
 #include <pbbam/BamRecord.h>
 
 namespace PacBio {
@@ -59,7 +59,8 @@ public:
 private:
     std::vector<Data::ArrayRead> FetchAlignedReads(const std::string& ccsInput) const;
     std::string CreateConsensus(const std::vector<Data::ArrayRead>& arrayReads) const;
-    std::map<int, std::pair<std::string, int>> CollectInsertions(const Data::MSA& msa) const;
+    std::map<int, std::pair<std::string, int>> CollectInsertions(
+        const Data::MSAByColumn& msa) const;
     std::pair<int, std::string> FindInsertions(
         std::map<int, std::pair<std::string, int>>* posInsCov, int windowSize = 20) const;
 

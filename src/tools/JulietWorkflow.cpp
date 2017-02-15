@@ -42,6 +42,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <vector>
 
@@ -52,7 +53,7 @@
 #include <pbcopper/utility/FileUtils.h>
 
 #include <pacbio/data/ArrayRead.h>
-#include <pacbio/data/MSA.h>
+#include <pacbio/data/MSAByColumn.h>
 #include <pacbio/io/BamParser.h>
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/juliet/JulietSettings.h>
@@ -87,7 +88,7 @@ void JulietWorkflow::Run(const JulietSettings& settings)
             std::vector<Data::ArrayRead> reads;
             reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
 
-            Data::MSA msa(reads);
+            Data::MSAByColumn msa(reads);
 
             // Compute fisher's exact test for each position
             for (auto& column : msa) {
@@ -135,11 +136,16 @@ void JulietWorkflow::Run(const JulietSettings& settings)
             }
 
             // Convert BamRecords to unrolled ArrayReads
-            std::vector<Data::ArrayRead> reads;
-            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+            std::vector<std::shared_ptr<Data::ArrayRead>> sharedReads;
+            {
+                std::vector<Data::ArrayRead> reads;
+                reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+                for (auto&& r : reads)
+                    sharedReads.emplace_back(std::make_shared<Data::ArrayRead>(std::move(r)));
+            }
 
             // Call variants
-            AminoAcidCaller aac(reads, error, settings.TargetConfigUser);
+            AminoAcidCaller aac(sharedReads, error, settings.TargetConfigUser);
             const auto json = aac.JSON();
 
             std::ofstream jsonStream(outputPrefix + ".json");
@@ -164,28 +170,28 @@ void JulietWorkflow::Run(const JulietSettings& settings)
             }
         }
     } else if (settings.Mode == AnalysisMode::PHASING) {
-        for (const auto& inputFile : settings.InputFiles) {
-            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
+        // for (const auto& inputFile : settings.InputFiles) {
+        //     const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
 
-            // Convert BamRecords to unrolled ArrayReads
-            std::vector<Data::ArrayRead> reads;
-            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+        //     // Convert BamRecords to unrolled ArrayReads
+        //     std::vector<Data::ArrayRead> reads;
+        //     reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
 
-            Data::MSA msa(reads);
+        //     Data::MSAByColumn msa(reads);
 
-            // Compute fisher's exact test for each position
-            for (auto& column : msa) {
-                column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-                column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
-            }
+        //     // Compute fisher's exact test for each position
+        //     for (auto& column : msa) {
+        //         column.AddFisherResult(Statistics::Tests::FisherCCS(column));
+        //         column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
+        //     }
 
-            Data::MSA msaWithPrior(reads, msa);
-        }
+        //     Data::MSAByColumn msaWithPrior(reads, msa);
+        // }
     } else if (settings.Mode == AnalysisMode::ERROR) {
         for (const auto& inputFile : settings.InputFiles) {
             std::vector<Data::ArrayRead> reads;
             reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-            Data::MSA msa(reads);
+            Data::MSAByColumn msa(reads);
             double sub = 0;
             double del = 0;
             int columnCount = 0;

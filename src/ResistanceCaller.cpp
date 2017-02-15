@@ -51,7 +51,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pacbio/data/MSA.h>
 #include <pacbio/juliet/ResistanceCaller.h>
 #include <pbcopper/json/JSON.h>
 
@@ -59,7 +58,7 @@
 namespace PacBio {
 namespace Juliet {
 
-ResistanceCaller::ResistanceCaller(const Data::MSA& msa)
+ResistanceCaller::ResistanceCaller(const Data::MSAByColumn& msa)
     : msa_(msa), begin_(msa.beginPos), end_(msa.endPos)
 {
     for (const auto& column : msa) {

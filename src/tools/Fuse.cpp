@@ -51,7 +51,6 @@
 #include <pbbam/PbiFilterQuery.h>
 
 #include <pacbio/data/ArrayRead.h>
-#include <pacbio/data/MSA.h>
 #include <pbbam/BamRecord.h>
 
 #include <pacbio/fuse/Fuse.h>
@@ -71,7 +70,7 @@ Fuse::Fuse(const std::vector<Data::ArrayRead>& arrayReads)
 
 std::string Fuse::CreateConsensus(const std::vector<Data::ArrayRead>& arrayReads) const
 {
-    Data::MSA msa(arrayReads);
+    Data::MSAByColumn msa(arrayReads);
 
     auto posInsCov = CollectInsertions(msa);
     std::map<int, std::string> posIns;
@@ -89,7 +88,8 @@ std::string Fuse::CreateConsensus(const std::vector<Data::ArrayRead>& arrayReads
     return consensus;
 }
 
-std::map<int, std::pair<std::string, int>> Fuse::CollectInsertions(const Data::MSA& msa) const
+std::map<int, std::pair<std::string, int>> Fuse::CollectInsertions(
+    const Data::MSAByColumn& msa) const
 {
     std::map<int, std::pair<std::string, int>> posInsCov;
     for (const auto& c : msa) {
