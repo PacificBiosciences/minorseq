@@ -84,6 +84,7 @@ private:
     int CountNumberOfTests(const std::vector<TargetGene>& genes) const;
     std::string FindDRMs(const std::string& geneName, const std::vector<TargetGene>& genes,
                          const int position) const;
+    double Probability(const std::string& a, const std::string& b);
 
 private:
     Data::MSAByRow msaByRow_;

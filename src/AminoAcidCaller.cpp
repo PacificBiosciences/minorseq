@@ -35,7 +35,7 @@
 
 // Author: Armin Töpfer
 
-// #define HAPLOTYPING
+#define HAPLOTYPING
 
 #include <array>
 #include <cmath>
@@ -58,6 +58,7 @@
 
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/juliet/AminoAcidTable.h>
+#include <pacbio/juliet/Haplotype.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pbcopper/json/JSON.h>
 
@@ -145,13 +146,9 @@ void AminoAcidCaller::PhaseVariants()
     for (const auto& v : variantPositions)
         std::cerr << v << std::endl;
 
-    struct Haplotype
-    {
-        std::vector<std::string> Names;
-        std::vector<std::string> Codons;
-    };
+    std::vector<Haplotype> haplotypesWithGaps;
+    std::vector<Haplotype> haplotypesNoGaps;
 
-    std::vector<Haplotype> haps;
     // For each read
     for (const auto& row : msaByRow_.Rows) {
         // Get all codons
@@ -165,64 +162,120 @@ void AminoAcidCaller::PhaseVariants()
         }
 
         // Lambda to add a fresh haplotype
-        auto AddNewHaplotype = [&haps, &codons, &row]() {
+        auto AddNewHaplotype = [&haplotypesWithGaps, &haplotypesNoGaps, &codons, &row]() {
             Haplotype h;
             h.Names = {row.Read->Name};
-            h.Codons = std::move(codons);
-            haps.emplace_back(std::move(h));
+            h.SetCodons(std::move(codons));
+
+            if (h.NoGaps)
+                haplotypesNoGaps.emplace_back(std::move(h));
+            else
+                haplotypesWithGaps.emplace_back(std::move(h));
+        };
+
+        auto CompareHaplotype = [&codons, &row](Haplotype& h) {
+            // Don't trust if the number of codons differ.
+            // That should only be the case if reads are not full-spanning.
+            if (h.Codons.size() != codons.size()) {
+                return false;
+            }
+            bool same = true;
+            for (size_t i = 0; i < codons.size(); ++i) {
+                if (h.Codons.at(i) != codons.at(i)) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) {
+                h.Names.push_back(row.Read->Name);
+            }
+            return same;
         };
 
         // There are already haplotypes to compare against
-        if (!haps.empty()) {
-            int miss = true;
-            for (auto& h : haps) {
-                // Don't trust if the number of codons differ.
-                // That should only be the case if reads are not full-spanning.
-                if (h.Codons.size() != codons.size()) {
+        int miss = true;
+
+        auto CompareHaplotypes = [&miss, &CompareHaplotype](std::vector<Haplotype>& haplotypes) {
+            for (auto& h : haplotypes) {
+                if (CompareHaplotype(h)) {
+                    miss = false;
                     break;
                 }
-                bool same = true;
-                for (size_t i = 0; i < codons.size(); ++i) {
-                    if (h.Codons.at(i) != codons.at(i)) {
-                        same = false;
-                        break;
-                    }
-                }
-                if (same) {
-                    miss = false;
-                    h.Names.push_back(row.Read->Name);
-                }
             }
-            if (miss) AddNewHaplotype();
-        } else {
-            AddNewHaplotype();
+        };
+
+        CompareHaplotypes(haplotypesNoGaps);
+        CompareHaplotypes(haplotypesWithGaps);
+
+        if (miss) AddNewHaplotype();
+    }
+
+    const auto HaplotypeComp = [](const Haplotype& a, const Haplotype& b) {
+        return a.Names.size() > b.Names.size();
+    };
+    std::sort(haplotypesNoGaps.begin(), haplotypesNoGaps.end(), HaplotypeComp);
+    std::sort(haplotypesWithGaps.begin(), haplotypesWithGaps.end(), HaplotypeComp);
+
+    {
+        std::cerr << "#HAP wo/ gaps: " << haplotypesNoGaps.size() << std::endl;
+        size_t count = 0;
+        for (auto& hn : haplotypesNoGaps) {
+            count += hn.Names.size();
+            std::cerr << hn << std::endl;
+        }
+        std::cerr << "# " << count << std::endl;
+    }
+
+    double bonferroni = haplotypesNoGaps.size();
+    for (auto& hw : haplotypesWithGaps) {
+        Haplotype* best;
+        double minProb = 1;
+        for (auto& hn : haplotypesNoGaps) {
+            // double p = Probability(hw.ConcatCodons(), hn.ConcatCodons());
+            int coverage = hn.Names.size() + hw.Names.size();
+            double p = Statistics::Fisher::fisher_exact_tiss(
+                           hn.Names.size(), coverage,
+                           coverage * Probability(hw.ConcatCodons(), hn.ConcatCodons()), coverage) *
+                       haplotypesNoGaps.size();
+
+            if (p == 0 || (p < 0.001 && p < minProb)) {
+                minProb = p;
+                best = &hn;
+            }
+            std::cerr << hw << std::endl << hn << std::endl << p << std::endl << std::endl;
+        }
+        if (minProb != -1) {
+            std::move(hw.Names.begin(), hw.Names.end(), std::back_inserter(best->Names));
+            // std::cerr << hw << std::endl << *best << std::endl << minProb << std::endl << std::endl;
         }
     }
 
-    std::sort(haps.begin(), haps.end(), [](const Haplotype& a, const Haplotype& b) -> bool {
-        return a.Names.size() > b.Names.size();
-    });
-
-    std::cerr << "#HAP: " << haps.size() << std::endl;
-    for (const auto& h : haps) {
-#if 0
-        bool clean = true;
-        for (const auto& c : h.Codons)
-        {
-            if (c.find('-') != std::string::npos)
-            {
-                clean = false;
-                break;
-            }
+    {
+        std::cerr << "#HAP wo/ gaps: " << haplotypesNoGaps.size() << std::endl;
+        size_t count = 0;
+        for (auto& hn : haplotypesNoGaps) {
+            count += hn.Names.size();
+            std::cerr << hn << std::endl;
         }
-        if (!clean) continue;
-#endif
-        std::cerr << h.Names.size();
-        for (const auto& c : h.Codons)
-            std::cerr << " " << c;
-        std::cerr << std::endl;
+        std::cerr << "# " << count << std::endl;
     }
 }
+
+double AminoAcidCaller::Probability(const std::string& a, const std::string& b)
+{
+    if (a.size() != b.size()) return 0.0;
+
+    double p = 1;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] == '-' || b[i] == '-')
+            p *= error_.deletion;
+        else if (a[i] != b[i])
+            p *= error_.substitution;
+        else
+            p *= error_.match;
+    }
+    return p;
+};
 
 void AminoAcidCaller::CallVariants()
 {
@@ -250,19 +303,6 @@ void AminoAcidCaller::CallVariants()
         curVariantGene.geneName = name;
         curVariantGene.geneOffset = begin;
         geneOffset = begin;
-    };
-
-    const auto CodonProbability = [this](const std::string& a, const std::string& b) {
-        double p = 1;
-        for (int i = 0; i < 3; ++i) {
-            if (a[i] == '-' || b[i] == '-')
-                p *= error_.deletion;
-            else if (a[i] != b[i])
-                p *= error_.substitution;
-            else
-                p *= error_.match;
-        }
-        return p;
     };
 
     const int numberOfTests = CountNumberOfTests(genes);
@@ -370,12 +410,12 @@ void AminoAcidCaller::CallVariants()
             for (const auto& codon_counts : codons) {
                 if (AAT::FromCodon.at(codon_counts.first) == curVariantPosition.refAminoAcid)
                     continue;
-                double p = (Statistics::Fisher::fisher_exact_tiss(
-                                codon_counts.second, coverage,
-                                coverage * CodonProbability(curVariantPosition.refCodon,
-                                                            codon_counts.first),
-                                coverage) *
-                            numberOfTests);
+                double p =
+                    (Statistics::Fisher::fisher_exact_tiss(
+                         codon_counts.second, coverage,
+                         coverage * Probability(curVariantPosition.refCodon, codon_counts.first),
+                         coverage) *
+                     numberOfTests);
 
                 if (p > 1) p = 1;
 
