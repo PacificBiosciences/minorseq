@@ -54,9 +54,11 @@ void Cleric::Align(const std::string& fromReference, const std::string& toRefere
 
 void Cleric::Convert(const std::string& outputFile)
 {
-    using namespace PacBio::BAM;
+    using BAM::Cigar;
+    using BAM::CigarOperation;
+    using BAM::CigarOperationType;
 
-    BamReader in(alignmentPath_);
+    BAM::BamReader in(alignmentPath_);
 
     if (in.Header().Sequences().empty())
         throw std::runtime_error("Could not find reference sequence name");
@@ -88,12 +90,12 @@ void Cleric::Convert(const std::string& outputFile)
     GetGaplessMapping(fromReferenceSequence_, &sam_pos_to_fasta_pos);
     GetGaplessMapping(toReferenceSequence_, &fasta_pos_to_sam_pos);
 
-    BamHeader h = in.Header().DeepCopy();
+    BAM::BamHeader h = in.Header().DeepCopy();
     h.ClearSequences();
-    h.AddSequence(SequenceInfo(toReferenceName_, std::to_string(toReferenceGapless_.size())));
+    h.AddSequence(BAM::SequenceInfo(toReferenceName_, std::to_string(toReferenceGapless_.size())));
 
-    BamWriter out(outputFile, h);
-    BamRecord read;
+    BAM::BamWriter out(outputFile, h);
+    BAM::BamRecord read;
     while (in.GetNext(read)) {
         std::string source_str = fromReferenceSequence_;
         std::string dest_str = toReferenceSequence_;
@@ -114,9 +116,6 @@ void Cleric::Convert(const std::string& outputFile)
         int pos_in_source_ref = sam_pos_to_fasta_pos.at(read.ReferenceStart());
 
         Cigar new_cigar_tuple;
-
-        int need_to_clip_left = 0;
-        int need_to_clip_right = 0;
 
         int new_sam_start = 0;
         int pos_in_dest_ref = 0;
@@ -657,7 +656,7 @@ void Cleric::Convert(const std::string& outputFile)
             --i;
         }
 
-        std::string new_seq = read.Sequence(Orientation::GENOMIC);
+        std::string new_seq = read.Sequence(BAM::Orientation::GENOMIC);
 
         // calculate edit distance (and possibly replace match states)
         pos_in_read = 0;
@@ -672,7 +671,6 @@ void Cleric::Convert(const std::string& outputFile)
                 return CigarOperationType::SEQUENCE_MISMATCH;
         };
 
-        int tlen = 0;
         for (const auto& op : new_cigar_tuple) {
             const CigarOperationType cigar_op = op.Type();
             const int cigar_op_count = op.Length();
@@ -698,7 +696,6 @@ void Cleric::Convert(const std::string& outputFile)
                 if (old_state == CigarOperationType::SEQUENCE_MISMATCH) new_edit_distance += count;
                 replace_cigar_tuple.emplace_back(old_state, count);
 
-                tlen += cigar_op_count;
                 pos_in_read += cigar_op_count;
                 pos_in_dest_ref += cigar_op_count;
             } else if (cigar_op == CigarOperationType::INSERTION) {
@@ -708,7 +705,6 @@ void Cleric::Convert(const std::string& outputFile)
             } else if (cigar_op == CigarOperationType::DELETION) {
                 new_edit_distance += cigar_op_count;
                 replace_cigar_tuple.emplace_back(cigar_op, cigar_op_count);
-                tlen += cigar_op_count;
                 pos_in_dest_ref += cigar_op_count;
             } else if (cigar_op == CigarOperationType::SOFT_CLIP) {
                 replace_cigar_tuple.emplace_back(cigar_op, cigar_op_count);

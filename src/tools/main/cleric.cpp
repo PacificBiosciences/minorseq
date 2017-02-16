@@ -37,6 +37,7 @@
 
 #include <exception>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -50,33 +51,34 @@
 #include <pacbio/cleric/Cleric.h>
 #include <pacbio/cleric/ClericSettings.h>
 
-namespace {
-using namespace PacBio::Cleric;
-
+namespace PacBio {
+namespace Cleric {
 static void ParseInputFiles(const std::vector<std::string>& inputs, std::string* bamPath,
                             std::string* fromReference, std::string* fromReferenceName,
                             std::string* toReference, std::string* toReferenceName)
 {
-    using namespace PacBio::BAM;
     std::vector<std::string> fastaPaths;
     for (const auto& i : inputs) {
+        std::unique_ptr<BAM::BamReader> reader;
         try {
-            BamReader reader(i);
-            if (!bamPath->empty()) throw std::runtime_error("Only one BAM input is allowed!");
-            *bamPath = i;
-            if (reader.Header().Sequences().empty())
-                throw std::runtime_error("Could not find reference sequence name");
-            *fromReferenceName = reader.Header().Sequences().begin()->Name();
-        } catch (...) {
+            reader = std::unique_ptr<BAM::BamReader>(new BAM::BamReader(i));
+        } catch (const std::runtime_error& e) {
             // If this is trigerred, the input file is not a BAM file.
             fastaPaths.push_back(i);
+            continue;
         }
+
+        if (!bamPath->empty()) throw std::runtime_error("Only one BAM input is allowed!");
+        *bamPath = i;
+        if (reader->Header().Sequences().empty())
+            throw std::runtime_error("Could not find reference sequence name");
+        *fromReferenceName = reader->Header().Sequences().begin()->Name();
     }
 
     for (const auto& fasta : fastaPaths) {
-        FastaReader msaReader(fasta);
+        BAM::FastaReader msaReader(fasta);
 
-        FastaSequence f;
+        BAM::FastaSequence f;
         while (msaReader.GetNext(f)) {
             if (f.Name() == *fromReferenceName) {
                 if (fromReference->empty()) {
@@ -132,10 +134,12 @@ static int Runner(const PacBio::CLI::Results& options)
 
     return EXIT_SUCCESS;
 }
+}
 };
 
 // Entry point
 int main(int argc, char* argv[])
 {
-    return PacBio::CLI::Run(argc, argv, ClericSettings::CreateCLI(), &Runner);
+    return PacBio::CLI::Run(argc, argv, PacBio::Cleric::ClericSettings::CreateCLI(),
+                            &PacBio::Cleric::Runner);
 }

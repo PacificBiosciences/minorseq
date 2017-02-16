@@ -51,7 +51,6 @@ std::map<std::string, double> Tests::FisherCCS(const std::array<int, 5>& observe
 {
     int argMax = 0;
     double sum = 0;
-    const auto pml = CalculatePml(observed, &argMax, &sum);
 
     std::map<std::string, double> results;
     for (const auto& kv : insertions) {
@@ -83,10 +82,7 @@ Data::FisherResult Tests::FisherCCS(const std::array<int, 5>& observed)
         if (fr.pValues.at(i) < alpha && observed.at(i) > 1) {
             if (i != argMax) fr.hit = true;
             fr.mask[i] = 1;
-        }
-        // else if (i == argMax)
-        //     fr.mask[i] = 1;
-        else
+        } else
             fr.mask[i] = 0;
     }
     fr.argMax = argMax;

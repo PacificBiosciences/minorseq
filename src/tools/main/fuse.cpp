@@ -47,8 +47,8 @@
 #include <pacbio/fuse/Fuse.h>
 #include <pacbio/fuse/FuseSettings.h>
 
-namespace {
-using namespace PacBio::Fuse;
+namespace PacBio {
+namespace Fuse {
 
 static int Runner(const PacBio::CLI::Results& options)
 {
@@ -60,7 +60,6 @@ static int Runner(const PacBio::CLI::Results& options)
 
     // Parse options
     FuseSettings settings(options);
-    // if (settings.OutputPrefix)
     for (const auto& input : options.PositionalArguments()) {
         Fuse fuse(input);
         std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";
@@ -76,10 +75,12 @@ static int Runner(const PacBio::CLI::Results& options)
 
     return EXIT_SUCCESS;
 }
+}
 };
 
 // Entry point
 int main(int argc, char* argv[])
 {
-    return PacBio::CLI::Run(argc, argv, FuseSettings::CreateCLI(), &Runner);
+    return PacBio::CLI::Run(argc, argv, PacBio::Fuse::FuseSettings::CreateCLI(),
+                            &PacBio::Fuse::Runner);
 }

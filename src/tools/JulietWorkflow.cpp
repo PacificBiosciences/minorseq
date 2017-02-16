@@ -74,138 +74,134 @@ std::ostream& JulietWorkflow::LogCI(const std::string& prefix)
 
 void JulietWorkflow::Run(const JulietSettings& settings)
 {
-    using Utility::FilePrefix;
-
     auto globalOutputPrefix = settings.OutputPrefix;
     globalOutputPrefix += globalOutputPrefix.empty() ? "" : "/";
 
     if (settings.Mode == AnalysisMode::BASE) {
-        std::unordered_map<std::string, JSON::Json> jsonResults;
-        for (const auto& inputFile : settings.InputFiles) {
-            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
-
-            // Convert BamRecords to unrolled ArrayReads
-            std::vector<Data::ArrayRead> reads;
-            reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-
-            Data::MSAByColumn msa(reads);
-
-            // Compute fisher's exact test for each position
-            for (auto& column : msa) {
-                column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-                column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
-            }
-
-            if (settings.SaveMSA) {
-                // Store msa + p-values
-                std::ofstream msaStream(outputPrefix + ".msa");
-                msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
-                int pos = msa.beginPos;
-                for (auto& column : msa)
-                    msaStream << ++pos << " " << column << std::endl;
-                msaStream.close();
-            }
-            ResistanceCaller resiCaller(msa);
-
-            const auto json = resiCaller.JSON();
-            jsonResults.insert({FilePrefix(inputFile), json});
-            std::ofstream jsonStream(outputPrefix + ".json");
-            jsonStream << json.dump(2) << std::endl;
-
-            std::ofstream htmlStream(outputPrefix + ".html");
-            ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
-        }
-    } else if (settings.Mode == AnalysisMode::AMINO) {
-        for (const auto& inputFile : settings.InputFiles) {
-            const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
-
-            ErrorEstimates error;
-            if (settings.SubstitutionRate != 0.0 && settings.DeletionRate != 0.0) {
-                error = ErrorEstimates(settings.SubstitutionRate, settings.DeletionRate);
-            } else {
-                std::string chemistry;
-                const BAM::BamReader bamReader(inputFile);
-                const auto readGroups = bamReader.Header().ReadGroups();
-                for (const auto& rg : readGroups) {
-                    if (chemistry.empty())
-                        chemistry = rg.SequencingChemistry();
-                    else if (chemistry != rg.SequencingChemistry())
-                        throw std::runtime_error("Mixed chemistries are not allowed");
-                }
-                error = ErrorEstimates(chemistry);
-            }
-
-            // Convert BamRecords to unrolled ArrayReads
-            std::vector<std::shared_ptr<Data::ArrayRead>> sharedReads;
-            {
-                std::vector<Data::ArrayRead> reads;
-                reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-                for (auto&& r : reads)
-                    sharedReads.emplace_back(std::make_shared<Data::ArrayRead>(std::move(r)));
-            }
-
-            // Call variants
-            AminoAcidCaller aac(sharedReads, error, settings.TargetConfigUser);
-            const auto json = aac.JSON();
-
-            std::ofstream jsonStream(outputPrefix + ".json");
-            jsonStream << json.dump(2) << std::endl;
-
-            std::ofstream htmlStream(outputPrefix + ".html");
-            AminoAcidCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
-
-            // Store msa + p-values
-            if (settings.SaveMSA) {
-                std::ofstream msaStream(outputPrefix + ".msa");
-                msaStream << "pos A C G T N" << std::endl;
-                int pos = aac.msa_->beginPos;
-                for (auto& column : *aac.msa_) {
-                    msaStream << ++pos;
-                    const std::array<int, 5>& counts = column;
-                    for (const auto& c : counts)
-                        msaStream << " " << c;
-                    msaStream << std::endl;
-                }
-                msaStream.close();
-            }
-        }
-    } else if (settings.Mode == AnalysisMode::PHASING) {
-        // for (const auto& inputFile : settings.InputFiles) {
-        //     const auto outputPrefix = globalOutputPrefix + FilePrefix(inputFile);
-
-        //     // Convert BamRecords to unrolled ArrayReads
-        //     std::vector<Data::ArrayRead> reads;
-        //     reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-
-        //     Data::MSAByColumn msa(reads);
-
-        //     // Compute fisher's exact test for each position
-        //     for (auto& column : msa) {
-        //         column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-        //         column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
-        //     }
-
-        //     Data::MSAByColumn msaWithPrior(reads, msa);
-        // }
+        Base(settings, globalOutputPrefix);
+    } else if (settings.Mode == AnalysisMode::AMINO || settings.Mode == AnalysisMode::PHASING) {
+        AminoPhasing(settings, globalOutputPrefix);
     } else if (settings.Mode == AnalysisMode::ERROR) {
-        for (const auto& inputFile : settings.InputFiles) {
+        Error(settings);
+    }
+}
+
+void JulietWorkflow::Base(const JulietSettings& settings, const std::string& globalOutputPrefix)
+{
+    std::unordered_map<std::string, JSON::Json> jsonResults;
+    for (const auto& inputFile : settings.InputFiles) {
+        const auto outputPrefix = globalOutputPrefix + Utility::FilePrefix(inputFile);
+
+        // Convert BamRecords to unrolled ArrayReads
+        std::vector<Data::ArrayRead> reads;
+        reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+
+        Data::MSAByColumn msa(reads);
+
+        // Compute fisher's exact test for each position
+        for (auto& column : msa) {
+            column.AddFisherResult(Statistics::Tests::FisherCCS(column));
+            column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
+        }
+
+        if (settings.SaveMSA) {
+            // Store msa + p-values
+            std::ofstream msaStream(outputPrefix + ".msa");
+            msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
+            int pos = msa.beginPos;
+            for (auto& column : msa)
+                msaStream << ++pos << " " << column << std::endl;
+            msaStream.close();
+        }
+        ResistanceCaller resiCaller(msa);
+
+        const auto json = resiCaller.JSON();
+        jsonResults.insert({Utility::FilePrefix(inputFile), json});
+        std::ofstream jsonStream(outputPrefix + ".json");
+        jsonStream << json.dump(2) << std::endl;
+
+        std::ofstream htmlStream(outputPrefix + ".html");
+        ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
+    }
+}
+void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
+                                  const std::string& globalOutputPrefix)
+{
+    for (const auto& inputFile : settings.InputFiles) {
+        const auto outputPrefix = globalOutputPrefix + Utility::FilePrefix(inputFile);
+
+        ErrorEstimates error;
+        if (settings.SubstitutionRate != 0.0 && settings.DeletionRate != 0.0) {
+            error = ErrorEstimates(settings.SubstitutionRate, settings.DeletionRate);
+        } else {
+            std::string chemistry;
+            const BAM::BamReader bamReader(inputFile);
+            const auto readGroups = bamReader.Header().ReadGroups();
+            for (const auto& rg : readGroups) {
+                if (chemistry.empty())
+                    chemistry = rg.SequencingChemistry();
+                else if (chemistry != rg.SequencingChemistry())
+                    throw std::runtime_error("Mixed chemistries are not allowed");
+            }
+            error = ErrorEstimates(chemistry);
+        }
+
+        // Convert BamRecords to unrolled ArrayReads
+        auto CreateReads = [&inputFile, &settings]() {
+            std::vector<std::shared_ptr<Data::ArrayRead>> sharedReadsLocal;
             std::vector<Data::ArrayRead> reads;
             reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-            Data::MSAByColumn msa(reads);
-            double sub = 0;
-            double del = 0;
-            int columnCount = 0;
-            for (const auto& column : msa) {
-                if (column.Coverage() > 100) {
-                    del += column.Frequency(4);
-                    sub += 1.0 - column.Frequency(4) - column.Frequency(column.MaxElement());
-                    ++columnCount;
-                }
+            for (auto&& r : reads)
+                sharedReadsLocal.emplace_back(std::make_shared<Data::ArrayRead>(std::move(r)));
+            return sharedReadsLocal;
+        };
+        std::vector<std::shared_ptr<Data::ArrayRead>> sharedReads = CreateReads();
+
+        // Call variants
+        AminoAcidCaller aac(sharedReads, error, settings.TargetConfigUser);
+        const auto json = aac.JSON();
+
+        std::ofstream jsonStream(outputPrefix + ".json");
+        jsonStream << json.dump(2) << std::endl;
+
+        std::ofstream htmlStream(outputPrefix + ".html");
+        AminoAcidCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
+
+        // Store msa + p-values
+        if (settings.SaveMSA) {
+            std::ofstream msaStream(outputPrefix + ".msa");
+            msaStream << "pos A C G T N" << std::endl;
+            int pos = aac.msa_->beginPos;
+            for (auto& column : *aac.msa_) {
+                msaStream << ++pos;
+                const std::array<int, 5>& counts = column;
+                for (const auto& c : counts)
+                    msaStream << " " << c;
+                msaStream << std::endl;
             }
-            std::cout << inputFile << std::endl;
-            std::cout << "sub: " << (sub / columnCount) << std::endl;
-            std::cout << "del: " << (del / columnCount) << std::endl;
+            msaStream.close();
         }
+    }
+}
+void JulietWorkflow::Error(const JulietSettings& settings)
+{
+    for (const auto& inputFile : settings.InputFiles) {
+        std::vector<Data::ArrayRead> reads;
+        reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
+        Data::MSAByColumn msa(reads);
+        double sub = 0;
+        double del = 0;
+        int columnCount = 0;
+        for (const auto& column : msa) {
+            if (column.Coverage() > 100) {
+                del += column.Frequency(4);
+                sub += 1.0 - column.Frequency(4) - column.Frequency(column.MaxElement());
+                ++columnCount;
+            }
+        }
+        std::cout << inputFile << std::endl;
+        std::cout << "sub: " << (sub / columnCount) << std::endl;
+        std::cout << "del: " << (del / columnCount) << std::endl;
     }
 }
 }

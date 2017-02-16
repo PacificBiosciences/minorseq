@@ -60,7 +60,6 @@ BAMArrayRead::BAMArrayRead(const BAM::BamRecord& record, int idx)
     ArrayRead::referenceEnd_ = record.ReferenceEnd();
     const auto seq = Record.Sequence(BAM::Orientation::GENOMIC, true, true);
 
-    // bool hasQualities = Record.HasQualities();
     bool hasQualities = !Record.Qualities().empty();
     BAM::QualityValues qual;
     if (hasQualities) qual = Record.Qualities(BAM::Orientation::GENOMIC, true, true);

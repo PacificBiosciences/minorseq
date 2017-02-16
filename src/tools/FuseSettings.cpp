@@ -48,13 +48,6 @@ namespace Fuse {
 namespace OptionNames {
 using PlainOption = Data::PlainOption;
 // clang-format off
-const PlainOption Region{
-    "region",
-    { "region", "r"},
-    "Region of Interest",
-    "Genomic region of interest, reads will be clipped to that region, empty means all reads.",
-    CLI::Option::StringType("")
-};
 const PlainOption Output{
     "output",
     { "output", "o"},
@@ -70,7 +63,6 @@ FuseSettings::FuseSettings(const PacBio::CLI::Results& options)
 {
     if (!options[OptionNames::Output].empty())
         OutputPrefix = std::forward<std::string>(options[OptionNames::Output]);
-    // SplitRegion(options[OptionNames::Region], &RegionStart, &RegionEnd);
 }
 
 size_t FuseSettings::ThreadCount(int n)
@@ -113,7 +105,6 @@ PacBio::CLI::Interface FuseSettings::CreateCLI()
     i.AddOptions(
     {
         OptionNames::Output
-        // OptionNames::Region
     });
 
     const std::string id = "uny.tasks.fuse";
