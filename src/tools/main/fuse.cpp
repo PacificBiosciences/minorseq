@@ -60,7 +60,6 @@ static int Runner(const PacBio::CLI::Results& options)
 
     // Parse options
     FuseSettings settings(options);
-    // if (settings.OutputPrefix)
     for (const auto& input : options.PositionalArguments()) {
         Fuse fuse(input);
         std::string outputFileName = PacBio::Utility::FilePrefix(input) + ".cons";

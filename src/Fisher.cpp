@@ -46,44 +46,14 @@ double Fisher::fisher_exact_tiss(int chi11, int chi12, int chi21, int chi22)
     // If co-occurrences at max possible, then this is our p-value,
     // Also if co-occurrences at min possible, this is our p-value.
 
-    if (co_occ == max_co_occ || co_occ == min_co_occ) {
-        // if (co_occ == max_co_occ) {
-        //     sign = 1;
-        // } else {
-        //     sign = -1;
-        // }
-    } else {
+    if (!(co_occ == max_co_occ || co_occ == min_co_occ)) {
         // Need to add in the other possible p-values.
         double factor_inc = factorInc(chi11, chi12, chi21, chi22);
         double factor_dec = factorDec(chi11, chi12, chi21, chi22);
 
-        // printf("%e,%e:%e\n",factor_inc,factor_dec,base_p);
-
         // Start out with the current p-value
         double curr_p = base_p;
 
-        // Want to sum the probabilites in the direction of decreasing P
-        // if (factor_dec < factor_inc) {
-        //     sign = -1;
-        //     // Loop down over co-occurrences
-        //     do {
-        //         // Determine P-value for current chi^2 matrix
-        //         curr_p *= factor_dec;
-
-        //         // Add to probability based on recurrence factor
-        //         base_p += curr_p;
-        //         co_occ--;
-
-        //         // Alter chi^2 matrix to reflect number of co-occurrences
-        //         chi11--;
-        //         chi22--;
-        //         chi12++;
-        //         chi21++;
-
-        //         // Get the next value for the recurrence factor
-        //         factor_dec = factorDec(chi11, chi12, chi21, chi22);
-        //     } while (co_occ > min_co_occ);
-        // } else
         if (factor_inc < factor_dec) {
             // sign = 1;
             // Loop up over co-occurrences
@@ -148,18 +118,6 @@ double Fisher::gammln(double xx)
     return -tmp + log(2.50662827465 * ser);
 }
 
-double Fisher::factln0(int n)
-{
-    static double pi = 3.1415926536;
-
-    if (n < 0) {
-        // nrerror("Negative factorial in routine FACTLN");
-        return 0.0;
-    }
-    if (n <= 1) return 0.0;
-    return 0.5 * log((2.0 * n + 1. / 3.) * pi) + n * (log(1.0 * n) - 1.0);
-}
-
 double Fisher::factln(int n)
 {
     static double a[101];
@@ -170,16 +128,18 @@ double Fisher::factln(int n)
     }
     if (n <= 1) return 0.0;
     if (n <= 100)
-        return a[n] ? a[n] : (a[n] = gammln((double)(n + 1.0)));
+        return a[n] ? a[n] : (a[n] = lgamma((double)(n + 1.0)));
     else
-        return gammln((double)(n + 1.0));
+        return lgamma((double)(n + 1.0));
 }
 
 double Fisher::binomialln(int n, int k) { return (factln(n) - factln(k) - factln(n - k)); }
 
 double Fisher::calc_hypergeom(int chi11, int chi12, int chi21, int chi22)
 {
-    static double b1, b2, b3;
+    static double b1;
+    static double b2;
+    static double b3;
     static int total;
 
     total = chi11 + chi12 + chi21 + chi22;

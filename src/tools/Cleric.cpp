@@ -117,9 +117,6 @@ void Cleric::Convert(const std::string& outputFile)
 
         Cigar new_cigar_tuple;
 
-        int need_to_clip_left = 0;
-        int need_to_clip_right = 0;
-
         int new_sam_start = 0;
         int pos_in_dest_ref = 0;
 

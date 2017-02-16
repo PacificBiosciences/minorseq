@@ -352,7 +352,7 @@ void AminoAcidCaller::CallVariants()
 void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details)
 {
 #if 1
-    auto strip = [](const std::string& input) -> std::string {
+    auto strip = [](const std::string& input) {
         std::string s = input;
         s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
         return s;
@@ -457,9 +457,7 @@ void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnow
             std::stringstream line;
             const std::string refCodon = strip(variantPosition["ref_codon"]);
             line << "<tr class=\"var\">\n"
-                 << "<td>" << strip(variantPosition["ref_codon"])[0] << " "
-                 << strip(variantPosition["ref_codon"])[1] << " "
-                 << strip(variantPosition["ref_codon"])[2] << "</td>\n"
+                 << "<td>" << refCodon[0] << " " << refCodon[1] << " " << refCodon[2] << "</td>\n"
                  << "<td>" << strip(variantPosition["ref_amino_acid"]) << "</td>\n"
                  << "<td>" << variantPosition["ref_position"] << "</td>";
             std::string prefix = line.str();
@@ -467,11 +465,9 @@ void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnow
             bool first = true;
             for (auto& variant_amino_acid : variantPosition["variant_amino_acids"]) {
                 for (auto& variant_codons : variant_amino_acid["variant_codons"]) {
-                    bool mutated[]{
-                        strip(variantPosition["ref_codon"])[0] != strip(variant_codons["codon"])[0],
-                        strip(variantPosition["ref_codon"])[1] != strip(variant_codons["codon"])[1],
-                        strip(variantPosition["ref_codon"])[2] !=
-                            strip(variant_codons["codon"])[2]};
+                    bool mutated[]{refCodon[0] != strip(variant_codons["codon"])[0],
+                                   refCodon[1] != strip(variant_codons["codon"])[1],
+                                   refCodon[2] != strip(variant_codons["codon"])[2]};
                     line << "<td>" << strip(variant_amino_acid["amino_acid"]) << "</td>";
                     line << "<td>";
                     for (int j = 0; j < 3; ++j) {
@@ -527,10 +523,10 @@ void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnow
                         out << "<tr><td>" << relPos << "</td>" << std::endl;
                         for (int j = 0; j < 5; ++j) {
                             out << "<td style=\"";
-                            if (relPos >= 0 && relPos < 3) {
-                                if (j ==
-                                    Data::NucleotideToTag(strip(variant_codons["codon"])[relPos]))
-                                    out << "color:red;";
+                            if (relPos >= 0 && relPos < 3 &&
+                                j ==
+                                    Data::NucleotideToTag(strip(variant_codons["codon"])[relPos])) {
+                                out << "color:red;";
                             }
                             if (j == Data::NucleotideToTag(strip(column["wt"])[0]))
                                 out << "font-weight:bold;";
