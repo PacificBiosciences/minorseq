@@ -81,7 +81,7 @@ const PlainOption Mode{
     "Execution mode",
     { "mode", "m" },
     "Execution mode",
-    "Execution mode: amino, base, phasing, or error",
+    "Execution mode: amino, phasing, or error",
     CLI::Option::StringType("amino")
 };
 const PlainOption SubstitutionRate{
@@ -105,6 +105,20 @@ const PlainOption TargetConfig{
     "Path to the JSON target config, containing regions of interest, the JSON string itself, or a predefined config tag like <HIV>",
     CLI::Option::StringType("")
 };
+const PlainOption Verbose{
+    "verbose",
+    { "verbose" },
+    "Verbose",
+    "Verbose",
+    CLI::Option::BoolType()
+};
+const PlainOption MergeOutliers{
+    "Merge Outliers",
+    { "merge-outliers" },
+    "Merge Outliers",
+    "Merge outliers haplotypes.",
+    CLI::Option::BoolType()
+};
 // clang-format on
 }  // namespace OptionNames
 
@@ -114,6 +128,8 @@ JulietSettings::JulietSettings(const PacBio::CLI::Results& options)
     , TargetConfigUser(std::forward<std::string>(options[OptionNames::TargetConfig]))
     , DRMOnly(options[OptionNames::DRMOnly])
     , SaveMSA(options[OptionNames::SaveMSA])
+    , MergeOutliers(options[OptionNames::MergeOutliers])
+    , Verbose(options[OptionNames::Verbose])
     , Mode(AnalysisModeFromString(options[OptionNames::Mode]))
     , SubstitutionRate(options[OptionNames::SubstitutionRate])
     , DeletionRate(options[OptionNames::DeletionRate])
@@ -185,8 +201,10 @@ PacBio::CLI::Interface JulietSettings::CreateCLI()
         OptionNames::DRMOnly,
         OptionNames::SaveMSA,
         OptionNames::TargetConfig,
+        OptionNames::MergeOutliers,
         OptionNames::SubstitutionRate,
-        OptionNames::DeletionRate
+        OptionNames::DeletionRate,
+        OptionNames::Verbose
     });
 
     const std::string id = "uny.tasks.juliet";
@@ -197,6 +215,7 @@ PacBio::CLI::Interface JulietSettings::CreateCLI()
     tcTask.AddOption(OptionNames::DRMOnly);
     tcTask.AddOption(OptionNames::SaveMSA);
     tcTask.AddOption(OptionNames::TargetConfig);
+    tcTask.AddOption(OptionNames::MergeOutliers);
     tcTask.AddOption(OptionNames::SubstitutionRate);
     tcTask.AddOption(OptionNames::DeletionRate);
     tcTask.NumProcessors(Task::MAX_NPROC);

@@ -1,4 +1,4 @@
-// Copyright (c) 2016, Pacific Biosciences of California, Inc.
+// Copyright (c) 2014-2015, Pacific Biosciences of California, Inc.
 //
 // All rights reserved.
 //
@@ -38,47 +38,13 @@
 #pragma once
 
 #include <string>
-#include <utility>
-#include <vector>
-
-#include <pacbio/juliet/AnalysisMode.h>
-#include <pacbio/juliet/TargetConfig.h>
-#include <pbcopper/cli/CLI.h>
 
 namespace PacBio {
 namespace Juliet {
-
-/// Contains user provided CLI configuration for Juliet
-struct JulietSettings
+struct TransitionTable
 {
-    std::vector<std::string> InputFiles;
-    std::string OutputPrefix;
-    TargetConfig TargetConfigUser;
-    int RegionStart = 0;
-    int RegionEnd = std::numeric_limits<int>::max();
-    bool Details;
-    bool DRMOnly;
-    bool SaveMSA;
-    bool MergeOutliers;
-    bool Verbose;
 
-    AnalysisMode Mode;
-    double SubstitutionRate;
-    double DeletionRate;
-
-    /// Parses the provided CLI::Results and retrieves a defined set of options.
-    JulietSettings(const PacBio::CLI::Results& options);
-
-    size_t ThreadCount(int n);
-
-    /// Given the description of the tool and its version, create all
-    /// necessary CLI::Options for the ccs executable.
-    static PacBio::CLI::Interface CreateCLI();
-
-    /// Splits region into ReconstructionStart and ReconstructionEnd.
-    static void SplitRegion(const std::string& region, int* start, int* end);
-
-    static AnalysisMode AnalysisModeFromString(const std::string& input);
+    double Transition(std::string ref, std::string read);
 };
 }
-}  // ::PacBio::Juliet
+}

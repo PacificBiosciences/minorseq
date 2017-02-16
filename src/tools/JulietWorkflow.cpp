@@ -118,7 +118,9 @@ void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
         std::vector<std::shared_ptr<Data::ArrayRead>> sharedReads = CreateReads();
 
         // Call variants
-        AminoAcidCaller aac(sharedReads, error, settings.TargetConfigUser);
+        AminoAcidCaller aac(sharedReads, error, settings);
+        if (settings.Mode == AnalysisMode::PHASING) aac.PhaseVariants();
+
         const auto json = aac.JSON();
 
         std::ofstream jsonStream(outputPrefix + ".json");

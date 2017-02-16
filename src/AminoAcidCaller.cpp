@@ -35,14 +35,13 @@
 
 // Author: Armin Töpfer
 
-#define HAPLOTYPING
-
 #include <array>
 #include <cmath>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -60,6 +59,7 @@
 #include <pacbio/juliet/AminoAcidTable.h>
 #include <pacbio/juliet/Haplotype.h>
 #include <pacbio/statistics/Fisher.h>
+#include <pacbio/util/Termcolor.h>
 #include <pbcopper/json/JSON.h>
 
 namespace PacBio {
@@ -67,14 +67,16 @@ namespace Juliet {
 using AAT = AminoAcidTable;
 
 AminoAcidCaller::AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
-                                 const ErrorEstimates& error, const TargetConfig& targetConfig)
-    : msaByRow_(reads), msaByColumn_(msaByRow_), error_(error), targetConfig_(targetConfig)
+                                 const ErrorEstimates& error, const JulietSettings& settings)
+    : msaByRow_(reads)
+    , msaByColumn_(msaByRow_)
+    , error_(error)
+    , targetConfig_(settings.TargetConfigUser)
+    , verbose_(settings.Verbose)
+    , mergeOutliers_(settings.MergeOutliers)
 {
 
     CallVariants();
-#ifdef HAPLOTYPING
-    PhaseVariants();
-#endif
 }
 
 int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) const
@@ -142,16 +144,20 @@ void AminoAcidCaller::PhaseVariants()
             for (const auto& aa_codon : pos_vp.second.aminoAcidToCodons)
                 for (const auto& varCodon : aa_codon.second)
                     variantPositions.emplace_back(vg.geneOffset + pos_vp.first * 3);
-    // std::cerr << vg.geneName << " " << vg.geneOffset << " " << pos_vp.first << " " << pos_vp.second.refCodon << " " << varCodon.codon << std::endl;
-    for (const auto& v : variantPositions)
-        std::cerr << v << std::endl;
 
-    std::vector<Haplotype> haplotypesWithGaps;
-    std::vector<Haplotype> haplotypesNoGaps;
+    if (verbose_) {
+        std::cerr << "Variant positions:";
+        for (const auto& v : variantPositions)
+            std::cerr << " " << v;
+        std::cerr << std::endl;
+    }
+    std::vector<std::shared_ptr<Haplotype>> observations;
+    std::vector<std::shared_ptr<Haplotype>> generators;
 
     // For each read
     for (const auto& row : msaByRow_.Rows) {
-        // Get all codons
+
+        // Get all codons for this row
         std::vector<std::string> codons;
         for (const auto& v : variantPositions) {
             std::string codon;
@@ -161,104 +167,110 @@ void AminoAcidCaller::PhaseVariants()
             codons.emplace_back(std::move(codon));
         }
 
-        // Lambda to add a fresh haplotype
-        auto AddNewHaplotype = [&haplotypesWithGaps, &haplotypesNoGaps, &codons, &row]() {
-            Haplotype h;
-            h.Names = {row.Read->Name};
-            h.SetCodons(std::move(codons));
-
-            if (h.NoGaps)
-                haplotypesNoGaps.emplace_back(std::move(h));
-            else
-                haplotypesWithGaps.emplace_back(std::move(h));
-        };
-
-        auto CompareHaplotype = [&codons, &row](Haplotype& h) {
-            // Don't trust if the number of codons differ.
-            // That should only be the case if reads are not full-spanning.
-            if (h.Codons.size() != codons.size()) {
-                return false;
-            }
-            bool same = true;
-            for (size_t i = 0; i < codons.size(); ++i) {
-                if (h.Codons.at(i) != codons.at(i)) {
-                    same = false;
-                    break;
-                }
-            }
-            if (same) {
-                h.Names.push_back(row.Read->Name);
-            }
-            return same;
-        };
-
         // There are already haplotypes to compare against
         int miss = true;
 
-        auto CompareHaplotypes = [&miss, &CompareHaplotype](std::vector<Haplotype>& haplotypes) {
+        // Compare current row to existing haplotypes
+        auto CompareHaplotypes = [&miss, &codons,
+                                  &row](std::vector<std::shared_ptr<Haplotype>>& haplotypes) {
             for (auto& h : haplotypes) {
-                if (CompareHaplotype(h)) {
+                // Don't trust if the number of codons differ.
+                // That should only be the case if reads are not full-spanning.
+                if (h->Codons.size() != codons.size()) {
+                    continue;
+                }
+                bool same = true;
+                for (size_t i = 0; i < codons.size(); ++i) {
+                    if (h->Codons.at(i) != codons.at(i)) {
+                        same = false;
+                        break;
+                    }
+                }
+                if (same) {
+                    h->Names.push_back(row.Read->Name);
                     miss = false;
                     break;
                 }
             }
         };
 
-        CompareHaplotypes(haplotypesNoGaps);
-        CompareHaplotypes(haplotypesWithGaps);
+        CompareHaplotypes(generators);
+        CompareHaplotypes(observations);
 
-        if (miss) AddNewHaplotype();
-    }
+        // If row could not be collapsed into an existing haplotype
+        if (miss) {
+            auto h = std::make_shared<Haplotype>();
+            h->Names = {row.Read->Name};
+            h->SetCodons(std::move(codons));
 
-    const auto HaplotypeComp = [](const Haplotype& a, const Haplotype& b) {
-        return a.Names.size() > b.Names.size();
-    };
-    std::sort(haplotypesNoGaps.begin(), haplotypesNoGaps.end(), HaplotypeComp);
-    std::sort(haplotypesWithGaps.begin(), haplotypesWithGaps.end(), HaplotypeComp);
-
-    {
-        std::cerr << "#HAP wo/ gaps: " << haplotypesNoGaps.size() << std::endl;
-        size_t count = 0;
-        for (auto& hn : haplotypesNoGaps) {
-            count += hn.Names.size();
-            std::cerr << hn << std::endl;
+            if (h->NoGaps)
+                generators.emplace_back(std::move(h));
+            else
+                observations.emplace_back(std::move(h));
         }
-        std::cerr << "# " << count << std::endl;
     }
 
-    double bonferroni = haplotypesNoGaps.size();
-    for (auto& hw : haplotypesWithGaps) {
-        Haplotype* best;
-        double minProb = 1;
-        for (auto& hn : haplotypesNoGaps) {
-            // double p = Probability(hw.ConcatCodons(), hn.ConcatCodons());
-            int coverage = hn.Names.size() + hw.Names.size();
-            double p = Statistics::Fisher::fisher_exact_tiss(
-                           hn.Names.size(), coverage,
-                           coverage * Probability(hw.ConcatCodons(), hn.ConcatCodons()), coverage) *
-                       haplotypesNoGaps.size();
+    // Move those haplotypes out of generators that have insufficient coverage
+    auto f = [](const std::shared_ptr<Haplotype>& g) { return g->Size() >= 10; };
+    auto p = std::stable_partition(generators.begin(), generators.end(), f);
+    observations.insert(observations.end(), std::make_move_iterator(p),
+                        std::make_move_iterator(generators.end()));
+    generators.erase(p, generators.end());
 
-            if (p == 0 || (p < 0.001 && p < minProb)) {
-                minProb = p;
-                best = &hn;
+    // Haplotype comparator, ascending
+    auto HaplotypeComp = [](const std::shared_ptr<Haplotype>& a,
+                            const std::shared_ptr<Haplotype>& b) { return a->Size() < b->Size(); };
+
+    std::sort(generators.begin(), generators.end(), HaplotypeComp);
+    std::sort(observations.begin(), observations.end(), HaplotypeComp);
+
+    if (mergeOutliers_) {
+        // Given the set of haplotypes clustered by identity, try collapsing
+        // observations into generators.
+        for (auto& hw : observations) {
+            std::vector<double> probabilities;
+            if (verbose_) std::cerr << *hw << std::endl;
+            double genCov = 0;
+            for (auto& hn : generators) {
+                genCov += hn->Size();
+                if (verbose_) std::cerr << *hn << " ";
+                double p = 1;
+                for (size_t a = 0; a < hw->Codons.size(); ++a) {
+                    double p2 = transitions_.Transition(hn->Codons.at(a), hw->Codons.at(a));
+                    if (verbose_) std::cerr << std::setw(15) << p2;
+                    p *= p2;
+                }
+                if (verbose_) std::cerr << " = " << std::setw(15) << p << std::endl;
+                probabilities.push_back(p);
             }
-            std::cerr << hw << std::endl << hn << std::endl << p << std::endl << std::endl;
-        }
-        if (minProb != -1) {
-            std::move(hw.Names.begin(), hw.Names.end(), std::back_inserter(best->Names));
-            // std::cerr << hw << std::endl << *best << std::endl << minProb << std::endl << std::endl;
+
+            double sum = std::accumulate(probabilities.cbegin(), probabilities.cend(), 0.0);
+            std::vector<double> weight;
+            for (size_t i = 0; i < generators.size(); ++i)
+                weight.emplace_back(1.0 * generators[i]->Size() / genCov);
+
+            std::vector<double> probabilityWeight;
+            for (size_t i = 0; i < generators.size(); ++i)
+                probabilityWeight.emplace_back(weight[i] * probabilities[i] / sum);
+
+            double sumPW =
+                std::accumulate(probabilityWeight.cbegin(), probabilityWeight.cend(), 0.0);
+
+            for (size_t i = 0; i < generators.size(); ++i)
+                generators[i]->SoftCollapses += 1.0 * hw->Size() * probabilityWeight[i] / sumPW;
+
+            if (verbose_) std::cerr << std::endl;
         }
     }
 
-    {
-        std::cerr << "#HAP wo/ gaps: " << haplotypesNoGaps.size() << std::endl;
-        size_t count = 0;
-        for (auto& hn : haplotypesNoGaps) {
-            count += hn.Names.size();
-            std::cerr << hn << std::endl;
-        }
-        std::cerr << "# " << count << std::endl;
-    }
+    if (verbose_) std::cerr << "#Haplotypes: " << generators.size() << std::endl;
+    double counts = 0;
+    for (auto& hn : generators)
+        counts += hn->Size();
+    if (verbose_) std::cerr << "#Counts: " << counts << std::endl;
+
+    for (auto& hn : generators)
+        if (verbose_) std::cerr << hn->Size() / counts << "\t" << *hn << std::endl;
 }
 
 double AminoAcidCaller::Probability(const std::string& a, const std::string& b)
