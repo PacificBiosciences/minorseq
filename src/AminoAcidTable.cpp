@@ -35,75 +35,22 @@
 
 // Author: Armin Töpfer
 
-#pragma once
-
-#include <pbcopper/json/JSON.h>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include <pacbio/juliet/AminoAcidTable.h>
 
 namespace PacBio {
 namespace Juliet {
-class DRM
-{
-public:
-    std::string name;
-    std::vector<int> positions;
 
-public:
-    JSON::Json ToJson() const;
-};
-
-class ExpectedMinor
-{
-public:
-    int position;
-    std::string aminoacid;
-    std::string codon;
-
-public:
-    JSON::Json ToJson() const;
-};
-
-class TargetGene
-{
-public:
-    TargetGene(const int begin, const int end, const std::string& name,
-               const std::vector<DRM>& drms,
-               const std::vector<ExpectedMinor>& minors = std::vector<ExpectedMinor>());
-    TargetGene() = default;
-
-public:
-    int begin;
-    int end;
-    std::string name;
-    std::vector<DRM> drms;
-    std::vector<ExpectedMinor> minors;
-
-public:
-    JSON::Json ToJson() const;
-    static JSON::Json ToJson(const std::vector<TargetGene>& genes);
-};
-
-class TargetConfig
-{
-public:
-    TargetConfig() = default;
-    TargetConfig(const std::string& input);
-
-public:
-    std::vector<TargetGene> targetGenes;
-    std::string referenceSequence;
-    bool HasExpectedMinors() const;
-    size_t NumExpectedMinors() const;
-
-private:
-    static std::string DetermineConfigInput(const std::string& input);
-    static std::string ReferenceSequenceFromJson(const JSON::Json& root);
-    static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json& root);
-
-private:
-    static std::unordered_map<std::string, std::string> predefinedConfigs_;
-};
+const std::unordered_map<std::string, char> AminoAcidTable::FromCodon = {
+    {"ATT", 'I'}, {"ATC", 'I'}, {"ATA", 'I'}, {"CTT", 'L'}, {"CTC", 'L'}, {"CTA", 'L'},
+    {"CTG", 'L'}, {"TTA", 'L'}, {"TTG", 'L'}, {"GTT", 'V'}, {"GTC", 'V'}, {"GTA", 'V'},
+    {"GTG", 'V'}, {"TTT", 'F'}, {"TTC", 'F'}, {"ATG", 'M'}, {"TGT", 'C'}, {"TGC", 'C'},
+    {"GCT", 'A'}, {"GCC", 'A'}, {"GCA", 'A'}, {"GCG", 'A'}, {"GGT", 'G'}, {"GGC", 'G'},
+    {"GGA", 'G'}, {"GGG", 'G'}, {"CCT", 'P'}, {"CCC", 'P'}, {"CCA", 'P'}, {"CCG", 'P'},
+    {"ACT", 'T'}, {"ACC", 'T'}, {"ACA", 'T'}, {"ACG", 'T'}, {"TCT", 'S'}, {"TCC", 'S'},
+    {"TCA", 'S'}, {"TCG", 'S'}, {"AGT", 'S'}, {"AGC", 'S'}, {"TAT", 'Y'}, {"TAC", 'Y'},
+    {"TGG", 'W'}, {"CAA", 'Q'}, {"CAG", 'Q'}, {"AAT", 'N'}, {"AAC", 'N'}, {"CAT", 'H'},
+    {"CAC", 'H'}, {"GAA", 'E'}, {"GAG", 'E'}, {"GAT", 'D'}, {"GAC", 'D'}, {"AAA", 'K'},
+    {"AAG", 'K'}, {"CGT", 'R'}, {"CGC", 'R'}, {"CGA", 'R'}, {"CGG", 'R'}, {"AGA", 'R'},
+    {"AGG", 'R'}, {"TAA", 'X'}, {"TAG", 'X'}, {"TGA", 'X'}};
 }
 }  //::PacBio::Juliet

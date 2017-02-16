@@ -92,8 +92,6 @@ private:
     std::vector<VariantGene> variantGenes_;
     const ErrorEstimates error_;
     const TargetConfig targetConfig_;
-
-    static const std::unordered_map<std::string, char> codonToAmino_;
 };
 }
 }  // ::PacBio::Juliet

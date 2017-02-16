@@ -56,8 +56,8 @@
 #include <pacbio/data/MSAByColumn.h>
 #include <pacbio/io/BamParser.h>
 #include <pacbio/juliet/AminoAcidCaller.h>
+#include <pacbio/juliet/JsonToHtml.h>
 #include <pacbio/juliet/JulietSettings.h>
-#include <pacbio/juliet/ResistanceCaller.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pacbio/statistics/Tests.h>
 
@@ -77,53 +77,13 @@ void JulietWorkflow::Run(const JulietSettings& settings)
     auto globalOutputPrefix = settings.OutputPrefix;
     globalOutputPrefix += globalOutputPrefix.empty() ? "" : "/";
 
-    if (settings.Mode == AnalysisMode::BASE) {
-        Base(settings, globalOutputPrefix);
-    } else if (settings.Mode == AnalysisMode::AMINO || settings.Mode == AnalysisMode::PHASING) {
+    if (settings.Mode == AnalysisMode::AMINO || settings.Mode == AnalysisMode::PHASING) {
         AminoPhasing(settings, globalOutputPrefix);
     } else if (settings.Mode == AnalysisMode::ERROR) {
         Error(settings);
     }
 }
 
-void JulietWorkflow::Base(const JulietSettings& settings, const std::string& globalOutputPrefix)
-{
-    std::unordered_map<std::string, JSON::Json> jsonResults;
-    for (const auto& inputFile : settings.InputFiles) {
-        const auto outputPrefix = globalOutputPrefix + Utility::FilePrefix(inputFile);
-
-        // Convert BamRecords to unrolled ArrayReads
-        std::vector<Data::ArrayRead> reads;
-        reads = IO::ParseBam(inputFile, settings.RegionStart, settings.RegionEnd);
-
-        Data::MSAByColumn msa(reads);
-
-        // Compute fisher's exact test for each position
-        for (auto& column : msa) {
-            column.AddFisherResult(Statistics::Tests::FisherCCS(column));
-            column.AddFisherResult(Statistics::Tests::FisherCCS(column, column.insertions));
-        }
-
-        if (settings.SaveMSA) {
-            // Store msa + p-values
-            std::ofstream msaStream(outputPrefix + ".msa");
-            msaStream << "pos A Fa C Fc G Fg T Ft N Fn" << std::endl;
-            int pos = msa.beginPos;
-            for (auto& column : msa)
-                msaStream << ++pos << " " << column << std::endl;
-            msaStream.close();
-        }
-        ResistanceCaller resiCaller(msa);
-
-        const auto json = resiCaller.JSON();
-        jsonResults.insert({Utility::FilePrefix(inputFile), json});
-        std::ofstream jsonStream(outputPrefix + ".json");
-        jsonStream << json.dump(2) << std::endl;
-
-        std::ofstream htmlStream(outputPrefix + ".html");
-        ResistanceCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
-    }
-}
 void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
                                   const std::string& globalOutputPrefix)
 {
@@ -165,7 +125,7 @@ void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
         jsonStream << json.dump(2) << std::endl;
 
         std::ofstream htmlStream(outputPrefix + ".html");
-        AminoAcidCaller::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
+        JsonToHtml::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
 
         // Store msa + p-values
         if (settings.SaveMSA) {
