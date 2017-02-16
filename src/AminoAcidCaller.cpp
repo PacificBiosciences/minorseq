@@ -550,7 +550,7 @@ void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnow
 
 JSON::Json AminoAcidCaller::JSON()
 {
-    using namespace JSON;
+    using JSON::Json;
     Json root;
     std::vector<Json> genes;
     for (const auto& v : variantGenes_) {

@@ -78,7 +78,7 @@ ResistanceCaller::ResistanceCaller(const Data::MSAByColumn& msa)
 
 JSON::Json ResistanceCaller::JSON()
 {
-    using namespace PacBio::JSON;
+    using PacBio::JSON::Json;
 
     Json j;
     std::vector<Json> genes;

@@ -45,8 +45,8 @@
 #include <pacbio/juliet/JulietSettings.h>
 #include <pacbio/juliet/JulietWorkflow.h>
 
-namespace {
-using namespace PacBio::Juliet;
+namespace PacBio {
+namespace Juliet {
 
 static int Runner(const PacBio::CLI::Results& options)
 {
@@ -63,10 +63,12 @@ static int Runner(const PacBio::CLI::Results& options)
 
     return EXIT_SUCCESS;
 }
+}
 };
 
 // Entry point
 int main(int argc, char* argv[])
 {
-    return PacBio::CLI::Run(argc, argv, JulietSettings::CreateCLI(), &Runner);
+    return PacBio::CLI::Run(argc, argv, PacBio::Juliet::JulietSettings::CreateCLI(),
+                            &PacBio::Juliet::Runner);
 }
