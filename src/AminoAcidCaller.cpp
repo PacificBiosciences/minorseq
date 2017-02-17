@@ -41,6 +41,7 @@
 #include <exception>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -56,7 +57,9 @@
 
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/juliet/AminoAcidTable.h>
+#include <pacbio/juliet/Haplotype.h>
 #include <pacbio/statistics/Fisher.h>
+#include <pacbio/util/Termcolor.h>
 #include <pbcopper/json/JSON.h>
 
 namespace PacBio {
@@ -64,10 +67,14 @@ namespace Juliet {
 using AAT = AminoAcidTable;
 
 AminoAcidCaller::AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
-                                 const ErrorEstimates& error, const TargetConfig& targetConfig)
-    : nucMatrix_(reads), error_(error), targetConfig_(targetConfig)
+                                 const ErrorEstimates& error, const JulietSettings& settings)
+    : msaByRow_(reads)
+    , msaByColumn_(msaByRow_)
+    , error_(error)
+    , targetConfig_(settings.TargetConfigUser)
+    , verbose_(settings.Verbose)
+    , mergeOutliers_(settings.MergeOutliers)
 {
-    msa_ = std::unique_ptr<Data::MSAByColumn>(new Data::MSAByColumn(reads));
 
     CallVariants();
 }
@@ -82,10 +89,10 @@ int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) co
             // Only work on beginnings of a codon
             if (ri % 3 != 0) continue;
             // Relative to window begin
-            const int bi = i - nucMatrix_.BeginPos;
+            const int bi = i - msaByRow_.BeginPos;
 
             std::unordered_map<std::string, int> codons;
-            for (const auto& nucRow : nucMatrix_.Matrix) {
+            for (const auto& nucRow : msaByRow_.Rows) {
                 const auto& row = nucRow.Bases;
                 // Read does not cover codon
                 if (bi + 2 >= static_cast<int>(row.size()) || bi < 0) continue;
@@ -128,6 +135,160 @@ std::string AminoAcidCaller::FindDRMs(const std::string& geneName,
     }
     return drmSummary;
 };
+
+void AminoAcidCaller::PhaseVariants()
+{
+    std::vector<int> variantPositions;
+    for (const auto& vg : variantGenes_)
+        for (const auto& pos_vp : vg.relPositionToVariant)
+            for (const auto& aa_codon : pos_vp.second.aminoAcidToCodons)
+                for (const auto& varCodon : aa_codon.second)
+                    variantPositions.emplace_back(vg.geneOffset + pos_vp.first * 3);
+
+    if (verbose_) {
+        std::cerr << "Variant positions:";
+        for (const auto& v : variantPositions)
+            std::cerr << " " << v;
+        std::cerr << std::endl;
+    }
+    std::vector<std::shared_ptr<Haplotype>> observations;
+    std::vector<std::shared_ptr<Haplotype>> generators;
+
+    // For each read
+    for (const auto& row : msaByRow_.Rows) {
+
+        // Get all codons for this row
+        std::vector<std::string> codons;
+        for (const auto& v : variantPositions) {
+            std::string codon;
+            int local = v - msaByRow_.BeginPos - 3;
+            for (int i = 0; i < 3; ++i)
+                codon += row.Bases.at(local + i);
+            codons.emplace_back(std::move(codon));
+        }
+
+        // There are already haplotypes to compare against
+        int miss = true;
+
+        // Compare current row to existing haplotypes
+        auto CompareHaplotypes = [&miss, &codons,
+                                  &row](std::vector<std::shared_ptr<Haplotype>>& haplotypes) {
+            for (auto& h : haplotypes) {
+                // Don't trust if the number of codons differ.
+                // That should only be the case if reads are not full-spanning.
+                if (h->Codons.size() != codons.size()) {
+                    continue;
+                }
+                bool same = true;
+                for (size_t i = 0; i < codons.size(); ++i) {
+                    if (h->Codons.at(i) != codons.at(i)) {
+                        same = false;
+                        break;
+                    }
+                }
+                if (same) {
+                    h->Names.push_back(row.Read->Name);
+                    miss = false;
+                    break;
+                }
+            }
+        };
+
+        CompareHaplotypes(generators);
+        CompareHaplotypes(observations);
+
+        // If row could not be collapsed into an existing haplotype
+        if (miss) {
+            auto h = std::make_shared<Haplotype>();
+            h->Names = {row.Read->Name};
+            h->SetCodons(std::move(codons));
+
+            if (h->NoGaps)
+                generators.emplace_back(std::move(h));
+            else
+                observations.emplace_back(std::move(h));
+        }
+    }
+
+    // Move those haplotypes out of generators that have insufficient coverage
+    auto f = [](const std::shared_ptr<Haplotype>& g) { return g->Size() >= 10; };
+    auto p = std::stable_partition(generators.begin(), generators.end(), f);
+    observations.insert(observations.end(), std::make_move_iterator(p),
+                        std::make_move_iterator(generators.end()));
+    generators.erase(p, generators.end());
+
+    // Haplotype comparator, ascending
+    auto HaplotypeComp = [](const std::shared_ptr<Haplotype>& a,
+                            const std::shared_ptr<Haplotype>& b) { return a->Size() < b->Size(); };
+
+    std::sort(generators.begin(), generators.end(), HaplotypeComp);
+    std::sort(observations.begin(), observations.end(), HaplotypeComp);
+
+    if (mergeOutliers_) {
+        // Given the set of haplotypes clustered by identity, try collapsing
+        // observations into generators.
+        for (auto& hw : observations) {
+            std::vector<double> probabilities;
+            if (verbose_) std::cerr << *hw << std::endl;
+            double genCov = 0;
+            for (auto& hn : generators) {
+                genCov += hn->Size();
+                if (verbose_) std::cerr << *hn << " ";
+                double p = 1;
+                for (size_t a = 0; a < hw->Codons.size(); ++a) {
+                    double p2 = transitions_.Transition(hn->Codons.at(a), hw->Codons.at(a));
+                    if (verbose_) std::cerr << std::setw(15) << p2;
+                    p *= p2;
+                }
+                if (verbose_) std::cerr << " = " << std::setw(15) << p << std::endl;
+                probabilities.push_back(p);
+            }
+
+            double sum = std::accumulate(probabilities.cbegin(), probabilities.cend(), 0.0);
+            std::vector<double> weight;
+            for (size_t i = 0; i < generators.size(); ++i)
+                weight.emplace_back(1.0 * generators[i]->Size() / genCov);
+
+            std::vector<double> probabilityWeight;
+            for (size_t i = 0; i < generators.size(); ++i)
+                probabilityWeight.emplace_back(weight[i] * probabilities[i] / sum);
+
+            double sumPW =
+                std::accumulate(probabilityWeight.cbegin(), probabilityWeight.cend(), 0.0);
+
+            for (size_t i = 0; i < generators.size(); ++i)
+                generators[i]->SoftCollapses += 1.0 * hw->Size() * probabilityWeight[i] / sumPW;
+
+            if (verbose_) std::cerr << std::endl;
+        }
+    }
+
+    if (verbose_) std::cerr << "#Haplotypes: " << generators.size() << std::endl;
+    double counts = 0;
+    for (auto& hn : generators)
+        counts += hn->Size();
+    if (verbose_) std::cerr << "#Counts: " << counts << std::endl;
+
+    for (auto& hn : generators)
+        if (verbose_) std::cerr << hn->Size() / counts << "\t" << *hn << std::endl;
+}
+
+double AminoAcidCaller::Probability(const std::string& a, const std::string& b)
+{
+    if (a.size() != b.size()) return 0.0;
+
+    double p = 1;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] == '-' || b[i] == '-')
+            p *= error_.deletion;
+        else if (a[i] != b[i])
+            p *= error_.substitution;
+        else
+            p *= error_.match;
+    }
+    return p;
+};
+
 void AminoAcidCaller::CallVariants()
 {
     auto genes = targetConfig_.targetGenes;
@@ -137,7 +298,7 @@ void AminoAcidCaller::CallVariants()
     const bool hasReference = !targetConfig_.referenceSequence.empty();
     // If no user config has been provided, use complete input region
     if (genes.empty()) {
-        TargetGene tg(nucMatrix_.BeginPos, nucMatrix_.EndPos, "unknown", {});
+        TargetGene tg(msaByRow_.BeginPos, msaByRow_.EndPos, "unknown", {});
         genes.emplace_back(tg);
     }
 
@@ -152,20 +313,8 @@ void AminoAcidCaller::CallVariants()
             variantGenes_.push_back(std::move(curVariantGene));
         curVariantGene = VariantGene();
         curVariantGene.geneName = name;
+        curVariantGene.geneOffset = begin;
         geneOffset = begin;
-    };
-
-    const auto CodonProbability = [this](const std::string& a, const std::string& b) {
-        double p = 1;
-        for (int i = 0; i < 3; ++i) {
-            if (a[i] == '-' || b[i] == '-')
-                p *= error_.deletion;
-            else if (a[i] != b[i])
-                p *= error_.substitution;
-            else
-                p *= error_.match;
-        }
-        return p;
     };
 
     const int numberOfTests = CountNumberOfTests(genes);
@@ -219,14 +368,14 @@ void AminoAcidCaller::CallVariants()
             // Only work on beginnings of a codon
             if (ri % 3 != 0) continue;
             // Relative to window begin
-            const int bi = i - nucMatrix_.BeginPos;
+            const int bi = i - msaByRow_.BeginPos;
 
             const int codonPos = 1 + (ri / 3);
             auto& curVariantPosition = curVariantGene.relPositionToVariant[codonPos];
 
             std::map<std::string, int> codons;
             int coverage = 0;
-            for (const auto& nucRow : nucMatrix_.Matrix) {
+            for (const auto& nucRow : msaByRow_.Rows) {
                 const auto& row = nucRow.Bases;
                 const auto CodonContains = [&row, &bi](const char x) {
                     return (row.at(bi + 0) == x || row.at(bi + 1) == x || row.at(bi + 2) == x);
@@ -273,12 +422,12 @@ void AminoAcidCaller::CallVariants()
             for (const auto& codon_counts : codons) {
                 if (AAT::FromCodon.at(codon_counts.first) == curVariantPosition.refAminoAcid)
                     continue;
-                double p = (Statistics::Fisher::fisher_exact_tiss(
-                                codon_counts.second, coverage,
-                                coverage * CodonProbability(curVariantPosition.refCodon,
-                                                            codon_counts.first),
-                                coverage) *
-                            numberOfTests);
+                double p =
+                    (Statistics::Fisher::fisher_exact_tiss(
+                         codon_counts.second, coverage,
+                         coverage * Probability(curVariantPosition.refCodon, codon_counts.first),
+                         coverage) *
+                     numberOfTests);
 
                 if (p > 1) p = 1;
 
@@ -299,22 +448,22 @@ void AminoAcidCaller::CallVariants()
             if (!curVariantPosition.aminoAcidToCodons.empty()) {
                 curVariantPosition.coverage = coverage;
                 for (int j = -3; j < 6; ++j) {
-                    if (i + j >= nucMatrix_.BeginPos && i + j < nucMatrix_.EndPos) {
+                    if (i + j >= msaByRow_.BeginPos && i + j < msaByRow_.EndPos) {
                         int abs = ai + j;
                         JSON::Json msaCounts;
                         msaCounts["rel_pos"] = j;
                         msaCounts["abs_pos"] = abs;
-                        msaCounts["A"] = (*msa_)[abs][0];
-                        msaCounts["C"] = (*msa_)[abs][1];
-                        msaCounts["G"] = (*msa_)[abs][2];
-                        msaCounts["T"] = (*msa_)[abs][3];
-                        msaCounts["-"] = (*msa_)[abs][4];
+                        msaCounts["A"] = msaByColumn_[abs][0];
+                        msaCounts["C"] = msaByColumn_[abs][1];
+                        msaCounts["G"] = msaByColumn_[abs][2];
+                        msaCounts["T"] = msaByColumn_[abs][3];
+                        msaCounts["-"] = msaByColumn_[abs][4];
                         if (hasReference)
                             msaCounts["wt"] =
                                 std::string(1, targetConfig_.referenceSequence.at(abs));
                         else
-                            msaCounts["wt"] =
-                                std::string(1, Data::TagToNucleotide((*msa_)[abs].MaxElement()));
+                            msaCounts["wt"] = std::string(
+                                1, Data::TagToNucleotide(msaByColumn_[abs].MaxElement()));
                         curVariantPosition.msa.push_back(msaCounts);
                     }
                 }

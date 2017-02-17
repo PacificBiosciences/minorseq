@@ -54,7 +54,9 @@
 #include <pacbio/data/MSAByColumn.h>
 #include <pacbio/data/MSAByRow.h>
 #include <pacbio/juliet/ErrorEstimates.h>
+#include <pacbio/juliet/JulietSettings.h>
 #include <pacbio/juliet/TargetConfig.h>
+#include <pacbio/juliet/TransitionTable.h>
 #include <pacbio/juliet/VariantGene.h>
 #include <pbcopper/json/JSON.h>
 
@@ -67,7 +69,7 @@ class AminoAcidCaller
 {
 public:
     AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
-                    const ErrorEstimates& error, const TargetConfig& targetConfig);
+                    const ErrorEstimates& error, const JulietSettings& settings);
 
 public:
     /// Generate JSON output of variant amino acids
@@ -76,9 +78,7 @@ public:
 public:
     /// Generate HTML output of variant amino acids
     static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
-
-public:
-    std::unique_ptr<Data::MSAByColumn> msa_;
+    void PhaseVariants();
 
 private:
     static constexpr float alpha = 0.01;
@@ -86,12 +86,21 @@ private:
     int CountNumberOfTests(const std::vector<TargetGene>& genes) const;
     std::string FindDRMs(const std::string& geneName, const std::vector<TargetGene>& genes,
                          const int position) const;
+    double Probability(const std::string& a, const std::string& b);
 
 private:
-    Data::MSAByRow nucMatrix_;
+    Data::MSAByRow msaByRow_;
+    TransitionTable transitions_;
+
+public:
+    Data::MSAByColumn msaByColumn_;
+
+private:
     std::vector<VariantGene> variantGenes_;
     const ErrorEstimates error_;
     const TargetConfig targetConfig_;
+    const bool verbose_;
+    const bool mergeOutliers_;
 };
 }
 }  // ::PacBio::Juliet

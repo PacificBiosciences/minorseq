@@ -48,6 +48,7 @@ namespace Juliet {
 struct VariantGene
 {
     std::string geneName;
+    int geneOffset;
 
     struct VariantPosition
     {
