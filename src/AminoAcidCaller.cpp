@@ -264,14 +264,14 @@ void AminoAcidCaller::PhaseVariants()
         }
     }
 
-    if (verbose_) std::cerr << "#Haplotypes: " << generators.size() << std::endl;
+    std::cerr << "#Haplotypes: " << generators.size() << std::endl;
     double counts = 0;
     for (auto& hn : generators)
         counts += hn->Size();
-    if (verbose_) std::cerr << "#Counts: " << counts << std::endl;
+    std::cerr << "#Counts: " << counts << std::endl;
 
     for (auto& hn : generators)
-        if (verbose_) std::cerr << hn->Size() / counts << "\t" << *hn << std::endl;
+        std::cerr << hn->Size() / counts << "\t" << *hn << std::endl;
 }
 
 double AminoAcidCaller::Probability(const std::string& a, const std::string& b)
