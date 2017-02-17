@@ -119,6 +119,13 @@ const PlainOption MergeOutliers{
     "Merge outliers haplotypes.",
     CLI::Option::BoolType()
 };
+const PlainOption Debug{
+    "Debug",
+    { "debug" },
+    "Debug",
+    "Debug returns all amino acids, irrelevant of their significance.",
+    CLI::Option::BoolType()
+};
 // clang-format on
 }  // namespace OptionNames
 
@@ -130,6 +137,7 @@ JulietSettings::JulietSettings(const PacBio::CLI::Results& options)
     , SaveMSA(options[OptionNames::SaveMSA])
     , MergeOutliers(options[OptionNames::MergeOutliers])
     , Verbose(options[OptionNames::Verbose])
+    , Debug(options[OptionNames::Debug])
     , Mode(AnalysisModeFromString(options[OptionNames::Mode]))
     , SubstitutionRate(options[OptionNames::SubstitutionRate])
     , DeletionRate(options[OptionNames::DeletionRate])
@@ -204,7 +212,8 @@ PacBio::CLI::Interface JulietSettings::CreateCLI()
         OptionNames::MergeOutliers,
         OptionNames::SubstitutionRate,
         OptionNames::DeletionRate,
-        OptionNames::Verbose
+        OptionNames::Verbose,
+        OptionNames::Debug
     });
 
     const std::string id = "uny.tasks.juliet";
@@ -218,6 +227,7 @@ PacBio::CLI::Interface JulietSettings::CreateCLI()
     tcTask.AddOption(OptionNames::MergeOutliers);
     tcTask.AddOption(OptionNames::SubstitutionRate);
     tcTask.AddOption(OptionNames::DeletionRate);
+    tcTask.AddOption(OptionNames::Debug);
     tcTask.NumProcessors(Task::MAX_NPROC);
 
     tcTask.InputFileTypes({

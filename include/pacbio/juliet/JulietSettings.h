@@ -61,6 +61,7 @@ struct JulietSettings
     bool SaveMSA;
     bool MergeOutliers;
     bool Verbose;
+    bool Debug;
 
     AnalysisMode Mode;
     double SubstitutionRate;

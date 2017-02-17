@@ -74,6 +74,7 @@ AminoAcidCaller::AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRe
     , targetConfig_(settings.TargetConfigUser)
     , verbose_(settings.Verbose)
     , mergeOutliers_(settings.MergeOutliers)
+    , debug_(settings.Debug)
 {
 
     CallVariants();
@@ -434,7 +435,8 @@ void AminoAcidCaller::CallVariants()
                 const bool variableSite =
                     MeasurePerformance(gene, codon_counts, codonPos, ai, p, coverage);
 
-                if (((hasExpectedMinors && variableSite) || !hasExpectedMinors) && p < alpha) {
+                if (debug_ ||
+                    (((hasExpectedMinors && variableSite) || !hasExpectedMinors) && p < alpha)) {
                     VariantGene::VariantPosition::VariantCodon curVariantCodon;
                     curVariantCodon.codon = codon_counts.first;
                     curVariantCodon.frequency = codon_counts.second / static_cast<double>(coverage);
