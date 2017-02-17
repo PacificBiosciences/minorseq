@@ -37,73 +37,17 @@
 
 #pragma once
 
-#include <pbcopper/json/JSON.h>
+#include <algorithm>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace PacBio {
 namespace Juliet {
-class DRM
+
+class AminoAcidTable
 {
 public:
-    std::string name;
-    std::vector<int> positions;
-
-public:
-    JSON::Json ToJson() const;
-};
-
-class ExpectedMinor
-{
-public:
-    int position;
-    std::string aminoacid;
-    std::string codon;
-
-public:
-    JSON::Json ToJson() const;
-};
-
-class TargetGene
-{
-public:
-    TargetGene(const int begin, const int end, const std::string& name,
-               const std::vector<DRM>& drms,
-               const std::vector<ExpectedMinor>& minors = std::vector<ExpectedMinor>());
-    TargetGene() = default;
-
-public:
-    int begin;
-    int end;
-    std::string name;
-    std::vector<DRM> drms;
-    std::vector<ExpectedMinor> minors;
-
-public:
-    JSON::Json ToJson() const;
-    static JSON::Json ToJson(const std::vector<TargetGene>& genes);
-};
-
-class TargetConfig
-{
-public:
-    TargetConfig() = default;
-    TargetConfig(const std::string& input);
-
-public:
-    std::vector<TargetGene> targetGenes;
-    std::string referenceSequence;
-    bool HasExpectedMinors() const;
-    size_t NumExpectedMinors() const;
-
-private:
-    static std::string DetermineConfigInput(const std::string& input);
-    static std::string ReferenceSequenceFromJson(const JSON::Json& root);
-    static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json& root);
-
-private:
-    static std::unordered_map<std::string, std::string> predefinedConfigs_;
+    static const std::unordered_map<std::string, char> FromCodon;
 };
 }
 }  //::PacBio::Juliet

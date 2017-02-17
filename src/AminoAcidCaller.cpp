@@ -55,11 +55,14 @@
 #include <boost/optional.hpp>
 
 #include <pacbio/juliet/AminoAcidCaller.h>
+#include <pacbio/juliet/AminoAcidTable.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pbcopper/json/JSON.h>
 
 namespace PacBio {
 namespace Juliet {
+using AAT = AminoAcidTable;
+
 AminoAcidCaller::AminoAcidCaller(const std::vector<std::shared_ptr<Data::ArrayRead>>& reads,
                                  const ErrorEstimates& error, const TargetConfig& targetConfig)
     : nucMatrix_(reads), error_(error), targetConfig_(targetConfig)
@@ -96,7 +99,7 @@ int AminoAcidCaller::CountNumberOfTests(const std::vector<TargetGene>& genes) co
                 std::string codon = std::string() + row.at(bi) + row.at(bi + 1) + row.at(bi + 2);
 
                 // Codon is bogus
-                if (codonToAmino_.find(codon) == codonToAmino_.cend()) continue;
+                if (AAT::FromCodon.find(codon) == AAT::FromCodon.cend()) continue;
 
                 codons[codon]++;
             }
@@ -128,7 +131,10 @@ std::string AminoAcidCaller::FindDRMs(const std::string& geneName,
 void AminoAcidCaller::CallVariants()
 {
     auto genes = targetConfig_.targetGenes;
-    bool hasReference = !targetConfig_.referenceSequence.empty();
+    const size_t numExpectedMinors = targetConfig_.NumExpectedMinors();
+    const bool hasExpectedMinors = numExpectedMinors > 0;
+
+    const bool hasReference = !targetConfig_.referenceSequence.empty();
     // If no user config has been provided, use complete input region
     if (genes.empty()) {
         TargetGene tg(nucMatrix_.BeginPos, nucMatrix_.EndPos, "unknown", {});
@@ -164,64 +170,44 @@ void AminoAcidCaller::CallVariants()
 
     const int numberOfTests = CountNumberOfTests(genes);
 
-#ifdef JULIET_INHOUSE_PERFORMANCE
     double truePositives = 0;
     double falsePositives = 0;
     double falseNegative = 0;
     double trueNegative = 0;
     auto MeasurePerformance = [&truePositives, &falsePositives, &falseNegative, &trueNegative, this,
-                               &geneName](const std::pair<std::string, int>& codon_counts,
-                                          const int& codonPos, const int& i, const double& p) {
-        const auto curCodon = codonToAmino_.at(codon_counts.first);
-        bool predictor = (i == 3191 && curCodon == 'Y' && "TAC" == codon_counts.first) ||
-                         (i == 2741 && curCodon == 'R' && "AGA" == codon_counts.first) ||
-                         (i == 2669 && curCodon == 'L' && "TTG" == codon_counts.first) ||
-                         (i == 3089 && curCodon == 'C' && "TGT" == codon_counts.first) ||
-                         (i == 3116 && curCodon == 'A' && "GCA" == codon_counts.first);
-        bool ignored =
-            (geneName == "Protease" && codonPos == 3 && curCodon == 'I') ||
-            (geneName == "Protease" && codonPos == 37 && curCodon == 'N') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 102 && curCodon == 'Q') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 122 && curCodon == 'K') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 162 && curCodon == 'C') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 214 && curCodon == 'F') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 272 && curCodon == 'A') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 293 && curCodon == 'V') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 358 && curCodon == 'K') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 376 && curCodon == 'A') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 400 && curCodon == 'A') ||
-            (geneName == "Reverse Transcriptase" && codonPos == 435 && curCodon == 'I') ||
-            (geneName == "RNase" && codonPos == 20 && curCodon == 'D') ||
-            (geneName == "RNase" && codonPos == 28 && curCodon == 'P') ||
-            (geneName == "RNase" && codonPos == 43 && curCodon == 'H') ||
-            (geneName == "RNase" && codonPos == 72 && curCodon == 'K') ||
-            (geneName == "RNase" && codonPos == 79 && curCodon == 'S') ||
-            (geneName == "Integrase" && codonPos == 10 && curCodon == 'E') ||
-            (geneName == "Integrase" && codonPos == 113 && curCodon == 'V') ||
-            (geneName == "Integrase" && codonPos == 123 && curCodon == 'S') ||
-            (geneName == "Integrase" && codonPos == 124 && curCodon == 'T') ||
-            (geneName == "Integrase" && codonPos == 127 && curCodon == 'K') ||
-            (geneName == "Integrase" && codonPos == 151 && curCodon == 'I') ||
-            (geneName == "Integrase" && codonPos == 232 && curCodon == 'D') ||
-            (geneName == "Integrase" && codonPos == 234 && curCodon == 'V');
-
-        if (!ignored) {
+                               &geneName](
+        const TargetGene& tg, const std::pair<std::string, int>& codon_counts, const int& codonPos,
+        const int& i, const double& p, const int& coverage) {
+        const char aminoacid = AAT::FromCodon.at(codon_counts.first);
+        auto Predictor = [&tg, &codonPos, &aminoacid, &codon_counts]() {
+            if (!tg.minors.empty()) {
+                for (const auto& minor : tg.minors) {
+                    if (codonPos == minor.position && aminoacid == minor.aminoacid[0] &&
+                        codon_counts.first == minor.codon) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        double relativeCoverage = 1.0 * codon_counts.second / coverage;
+        const bool variableSite = relativeCoverage < 0.8;
+        if (variableSite) {
             if (p < alpha) {
-                if (predictor)
+                if (Predictor())
                     ++truePositives;
                 else
                     ++falsePositives;
             } else {
-                if (predictor)
+                if (Predictor())
                     ++falseNegative;
                 else
                     ++trueNegative;
             }
         }
 
-        return !ignored;
+        return variableSite;
     };
-#endif
 
     for (const auto& gene : genes) {
         SetNewGene(gene.begin, gene.name);
@@ -242,30 +228,32 @@ void AminoAcidCaller::CallVariants()
             int coverage = 0;
             for (const auto& nucRow : nucMatrix_.Matrix) {
                 const auto& row = nucRow.Bases;
+                const auto CodonContains = [&row, &bi](const char x) {
+                    return (row.at(bi + 0) == x || row.at(bi + 1) == x || row.at(bi + 2) == x);
+                };
+
                 // Read does not cover codon
                 if (bi + 2 > static_cast<int>(row.size()) || bi < 0) continue;
-                if (row.at(bi + 0) == ' ' || row.at(bi + 1) == ' ' || row.at(bi + 2) == ' ')
-                    continue;
+                if (CodonContains(' ')) continue;
                 ++coverage;
 
                 // Read has a deletion
-                if (row.at(bi + 0) == '-' || row.at(bi + 1) == '-' || row.at(bi + 2) == '-')
-                    continue;
+                if (CodonContains('-')) continue;
 
                 const auto codon = std::string() + row.at(bi) + row.at(bi + 1) + row.at(bi + 2);
 
                 // Codon is bogus
-                if (codonToAmino_.find(codon) == codonToAmino_.cend()) continue;
+                if (AAT::FromCodon.find(codon) == AAT::FromCodon.cend()) continue;
 
                 codons[codon]++;
             }
 
             if (hasReference) {
                 curVariantPosition.refCodon = targetConfig_.referenceSequence.substr(ai, 3);
-                if (codonToAmino_.find(curVariantPosition.refCodon) == codonToAmino_.cend()) {
+                if (AAT::FromCodon.find(curVariantPosition.refCodon) == AAT::FromCodon.cend()) {
                     continue;
                 }
-                curVariantPosition.refAminoAcid = codonToAmino_.at(curVariantPosition.refCodon);
+                curVariantPosition.refAminoAcid = AAT::FromCodon.at(curVariantPosition.refCodon);
             } else {
                 int max = -1;
                 std::string argmax;
@@ -276,14 +264,14 @@ void AminoAcidCaller::CallVariants()
                     }
                 }
                 curVariantPosition.refCodon = argmax;
-                if (codonToAmino_.find(curVariantPosition.refCodon) == codonToAmino_.cend()) {
+                if (AAT::FromCodon.find(curVariantPosition.refCodon) == AAT::FromCodon.cend()) {
                     continue;
                 }
-                curVariantPosition.refAminoAcid = codonToAmino_.at(curVariantPosition.refCodon);
+                curVariantPosition.refAminoAcid = AAT::FromCodon.at(curVariantPosition.refCodon);
             }
 
             for (const auto& codon_counts : codons) {
-                if (codonToAmino_.at(codon_counts.first) == curVariantPosition.refAminoAcid)
+                if (AAT::FromCodon.at(codon_counts.first) == curVariantPosition.refAminoAcid)
                     continue;
                 double p = (Statistics::Fisher::fisher_exact_tiss(
                                 codon_counts.second, coverage,
@@ -294,20 +282,17 @@ void AminoAcidCaller::CallVariants()
 
                 if (p > 1) p = 1;
 
-#ifdef JULIET_INHOUSE_PERFORMANCE
-                const bool variableSite = MeasurePerformance(codon_counts, codonPos, ai, p);
+                const bool variableSite =
+                    MeasurePerformance(gene, codon_counts, codonPos, ai, p, coverage);
 
-                if (variableSite && p < alpha) {
-#else
-                if (p < alpha) {
-#endif
+                if (((hasExpectedMinors && variableSite) || !hasExpectedMinors) && p < alpha) {
                     VariantGene::VariantPosition::VariantCodon curVariantCodon;
                     curVariantCodon.codon = codon_counts.first;
                     curVariantCodon.frequency = codon_counts.second / static_cast<double>(coverage);
                     curVariantCodon.pValue = p;
                     curVariantCodon.knownDRM = FindDRMs(geneName, genes, codonPos);
 
-                    curVariantPosition.aminoAcidToCodons[codonToAmino_.at(codon_counts.first)]
+                    curVariantPosition.aminoAcidToCodons[AAT::FromCodon.at(codon_counts.first)]
                         .push_back(curVariantCodon);
                 }
             }
@@ -336,212 +321,16 @@ void AminoAcidCaller::CallVariants()
             }
         }
     }
-#ifdef JULIET_INHOUSE_PERFORMANCE
-    std::cerr << (truePositives / 5.0);
-    std::cerr << " " << (falsePositives / (numberOfTests - 5));
-    std::cerr << " " << numberOfTests;
-    std::cerr << " " << ((truePositives + trueNegative) /
-                         (truePositives + falsePositives + falseNegative + trueNegative));
-    std::cerr << " " << falsePositives;
-    std::cerr << std::endl;
-#endif
+    if (hasExpectedMinors) {
+        double tpr = truePositives / numExpectedMinors;
+        double fpr = falsePositives / (numberOfTests - numExpectedMinors);
+        double acc = (truePositives + trueNegative) /
+                     (truePositives + falsePositives + falseNegative + trueNegative);
+        std::cerr << tpr << " " << fpr << " " << numberOfTests << " " << acc << " "
+                  << falsePositives << std::endl;
+    }
     if (!curVariantGene.relPositionToVariant.empty())
         variantGenes_.push_back(std::move(curVariantGene));
-}
-
-void AminoAcidCaller::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details)
-{
-#if 1
-    auto strip = [](const std::string& input) {
-        std::string s = input;
-        s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
-        return s;
-    };
-    out << "<html>" << std::endl
-        << "<head>" << std::endl
-        << R"(
-            <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-            <script type="text/javascript">
-            $(document).ready(function() {
-                $(".var").bind( "click", function( event ) {
-                    $(this).next().slideToggle(0);
-            });
-            });
-            </script>)"
-        << std::endl
-        << "<style>" << std::endl
-        << R"(
-            body { font-family: helvetica-light }
-            table { border-collapse: collapse; margin-bottom: 20px; }
-            tr:nth-child(1) { background-color: #3d3d3d; color: white; }
-            tr:nth-child(3) th { padding: 5px 5px 5px 5px; text-align: center; border-bottom: 1px solid #2d2d2d; }
-            tr:nth-child(2) th:nth-child(2) { border-left: 1px dashed black; }
-            tr:nth-child(3) th:nth-child(3) { border-right: 1px dashed black; }
-            td { padding: 15px 5px 15px 5px; text-align: center; border-bottom: 1px solid white; }
-            table td:nth-child(1) { background-color:#ddd; border-right: 1px solid #eee; }
-            table td:nth-child(2) { background-color:#eee; border-right: 1px solid #ddd; }
-            table td:nth-child(3) { background-color:#fff; border-right: 1px solid #ddd; font-weight: bold;}
-            table td:nth-child(4) { background-color:#eee; border-right: 1px dashed #ccc;  }
-            table td:nth-child(5) { background-color: #ddd; border-right: 1px dashed #bbb; }
-            table td:nth-child(6) { background-color: #ccc; border-right: 1px dashed #aaa; }
-            table td:nth-child(7) { background-color: #bbb;}
-            table td:nth-child(8) { background-color: #aaa; color: #fff600}
-            tr:not(.msa):hover td { background-color: white; }
-            tr:not(.msa):hover td:nth-child(8) { color: purple; }
-            .msa table tr:hover td { background-color: gray; color:white; }
-            .top table { background-color:white; border:0; }
-            .top table td { background-color:white; border:0; border-bottom: 1px solid gray; font-weight: normal}
-            .top table tr { border:0; }
-            .top table th { border:0; }
-            .msa { display:none; }
-            )"
-        << std::endl
-        << "</style>" << std::endl
-        << "</head>" << std::endl
-        << R"(<body>
-            <details style="margin-bottom: 20px">
-            <summary>Legend</summary>
-            <p>Every table represents a gene in the Pol polyprotein.<br/>
-            Each row stands for a mutated amino acid. Positions are relative to the current gene.<br/>
-            Positions with no or synonymous mutation are not being shown.<br/>
-            The used reference is HXB2 and all coordinates are in reference space.<br/>
-            The mutated nucleotide is highlighted in the codon.<br/>
-            Frequency is per codon.<br/>
-            Coverage includes deletions.<br/>
-            Known drug-resistance mutations positions are annotated in the last column,<br/>
-            whereas 'S' stands for surveillance. Annotations from the <a href="https://hivdb.stanford.edu" target="_new">Stanford DB</a>.<br/>
-            <br/>
-            Clicking on a row unfolds the counts of the multiple sequence alignment of the<br/>
-            codon position and up to +-3 surrounding positions.<br/>
-            Red colored are nucleotides of the codon and in bold the wild type.<br/>
-            <br/>
-            Deletions and insertions are being ignored in this version.<br/>
-            <br/>
-            This software is for research only and has not been clinically validated!</p>
-            </details>)"
-        << std::endl;
-
-    if (j.find("genes") == j.cend() || j["genes"].is_null()) return;
-    for (const auto& gene : j["genes"]) {
-        out << "<table class=\"top\">" << std::endl
-            << R"(
-                <col width="40px"/>
-                <col width="40px"/>
-                <col width="40px"/>
-                <col width="40px"/>
-                <col width="40px"/>
-                <col width="60px"/>
-                <col width="60px"/>
-                <col width="180px"/>
-                <tr>
-                <th colspan="9">)"
-            << strip(gene["name"]) << R"(</th>
-                </tr>
-                <tr>
-                <th colspan="3">HXB2</th>
-                <th colspan="5">Sample</th>
-                </tr>
-                <tr>
-                <th>Codon</th>
-                <th>AA</th>
-                <th>Pos</th>
-                <th>AA</th>
-                <th colspan="1">Codon</th>
-                <th colspan="1">Frequency</th>
-                <th colspan="1">Coverage</th>
-                <th colspan="1">DRM</th>
-                </tr>)"
-            << std::endl;
-
-        for (auto& variantPosition : gene["variant_positions"]) {
-            std::stringstream line;
-            const std::string refCodon = strip(variantPosition["ref_codon"]);
-            line << "<tr class=\"var\">\n"
-                 << "<td>" << refCodon[0] << " " << refCodon[1] << " " << refCodon[2] << "</td>\n"
-                 << "<td>" << strip(variantPosition["ref_amino_acid"]) << "</td>\n"
-                 << "<td>" << variantPosition["ref_position"] << "</td>";
-            std::string prefix = line.str();
-            line.str("");
-            bool first = true;
-            for (auto& variant_amino_acid : variantPosition["variant_amino_acids"]) {
-                for (auto& variant_codons : variant_amino_acid["variant_codons"]) {
-                    bool mutated[]{refCodon[0] != strip(variant_codons["codon"])[0],
-                                   refCodon[1] != strip(variant_codons["codon"])[1],
-                                   refCodon[2] != strip(variant_codons["codon"])[2]};
-                    line << "<td>" << strip(variant_amino_acid["amino_acid"]) << "</td>";
-                    line << "<td>";
-                    for (int j = 0; j < 3; ++j) {
-                        if (mutated[j]) line << "<b style=\"color:#ff5e5e; font-weight:normal\">";
-                        line << strip(variant_codons["codon"])[j] << " ";
-                        if (mutated[j]) line << "</b>";
-                    }
-
-                    double fOrig = variant_codons["frequency"];
-                    double fTmp;
-                    int exp = 0;
-                    do {
-                        fTmp = fOrig * std::pow(10, ++exp);
-                    } while (static_cast<int>(fTmp) < 10);
-                    fOrig = static_cast<int>(fOrig * std::pow(10, exp));
-                    fOrig /= std::pow(10, exp);
-                    line << "<td>" << fOrig << "</td>";
-                    if (first) {
-                        out << prefix << line.str();
-                        out << "<td>" << variantPosition["coverage"] << "</td>";
-                        first = false;
-                    } else {
-                        out << "<tr class=\"var\"><td></td><td></td><td></td>" << line.str()
-                            << "<td></td>";
-                    }
-                    out << "<td>" << strip(variant_codons["known_drm"]) << "</td>";
-                    out << "</tr>" << std::endl;
-                    line.str("");
-
-                    out << R"(
-                        <tr class="msa">
-                        <td colspan=3 style="background-color: white"></td>
-                        <td colspan=14 style="padding:0; margin:0">
-                        <table style="padding:0; margin:0">
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <tr style="padding:0">
-                        <th style="padding:2px 0 0px 0">Pos</th>
-                        <th style="padding:2px 0 0px 0">A</th>
-                        <th style="padding:2px 0 0px 0">C</th>
-                        <th style="padding:2px 0 0px 0">G</th>
-                        <th style="padding:2px 0 0px 0">T</th>
-                        <th style="padding:2px 0 0px 0">-</th>
-                        </tr>
-                        )";
-
-                    for (auto& column : variantPosition["msa"]) {
-                        int relPos = column["rel_pos"];
-                        out << "<tr><td>" << relPos << "</td>" << std::endl;
-                        for (int j = 0; j < 5; ++j) {
-                            out << "<td style=\"";
-                            if (relPos >= 0 && relPos < 3 &&
-                                j ==
-                                    Data::NucleotideToTag(strip(variant_codons["codon"])[relPos])) {
-                                out << "color:red;";
-                            }
-                            if (j == Data::NucleotideToTag(strip(column["wt"])[0]))
-                                out << "font-weight:bold;";
-                            out << "\">" << column[std::string(1, Data::TagToNucleotide(j))]
-                                << "</td>" << std::endl;
-                        }
-                        out << "</tr>" << std::endl;
-                    }
-                    out << "</table></tr>" << std::endl;
-                }
-            }
-        }
-    }
-    out << "</table>" << std::endl << "</body>" << std::endl << "</html>" << std::endl;
-#endif
 }
 
 JSON::Json AminoAcidCaller::JSON()
@@ -557,18 +346,5 @@ JSON::Json AminoAcidCaller::JSON()
 
     return root;
 }
-
-const std::unordered_map<std::string, char> AminoAcidCaller::codonToAmino_ = {
-    {"ATT", 'I'}, {"ATC", 'I'}, {"ATA", 'I'}, {"CTT", 'L'}, {"CTC", 'L'}, {"CTA", 'L'},
-    {"CTG", 'L'}, {"TTA", 'L'}, {"TTG", 'L'}, {"GTT", 'V'}, {"GTC", 'V'}, {"GTA", 'V'},
-    {"GTG", 'V'}, {"TTT", 'F'}, {"TTC", 'F'}, {"ATG", 'M'}, {"TGT", 'C'}, {"TGC", 'C'},
-    {"GCT", 'A'}, {"GCC", 'A'}, {"GCA", 'A'}, {"GCG", 'A'}, {"GGT", 'G'}, {"GGC", 'G'},
-    {"GGA", 'G'}, {"GGG", 'G'}, {"CCT", 'P'}, {"CCC", 'P'}, {"CCA", 'P'}, {"CCG", 'P'},
-    {"ACT", 'T'}, {"ACC", 'T'}, {"ACA", 'T'}, {"ACG", 'T'}, {"TCT", 'S'}, {"TCC", 'S'},
-    {"TCA", 'S'}, {"TCG", 'S'}, {"AGT", 'S'}, {"AGC", 'S'}, {"TAT", 'Y'}, {"TAC", 'Y'},
-    {"TGG", 'W'}, {"CAA", 'Q'}, {"CAG", 'Q'}, {"AAT", 'N'}, {"AAC", 'N'}, {"CAT", 'H'},
-    {"CAC", 'H'}, {"GAA", 'E'}, {"GAG", 'E'}, {"GAT", 'D'}, {"GAC", 'D'}, {"AAA", 'K'},
-    {"AAG", 'K'}, {"CGT", 'R'}, {"CGC", 'R'}, {"CGA", 'R'}, {"CGG", 'R'}, {"AGA", 'R'},
-    {"AGG", 'R'}, {"TAA", 'X'}, {"TAG", 'X'}, {"TGA", 'X'}};
 }
 }  // ::PacBio::Juliet
