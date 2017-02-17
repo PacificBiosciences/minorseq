@@ -101,6 +101,7 @@ private:
     const TargetConfig targetConfig_;
     const bool verbose_;
     const bool mergeOutliers_;
+    const bool debug_;
 };
 }
 }  // ::PacBio::Juliet
