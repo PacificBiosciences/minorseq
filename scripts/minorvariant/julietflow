@@ -39,7 +39,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 PROGNAME=${0##*/}
-SHORTOPTS="hmi:r:c:j:t:m:"
+SHORTOPTS="hmi:r:c:j:t:m:k"
 LONGOPTS="help"
 
 ARGS=$(getopt -s bash --options $SHORTOPTS  \
