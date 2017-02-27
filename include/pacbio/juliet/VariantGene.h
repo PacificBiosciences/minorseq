@@ -38,6 +38,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -63,11 +64,14 @@ struct VariantGene
             double frequency;
             double pValue;
             std::string knownDRM;
+            std::vector<bool> haplotypeHit;
         };
         std::map<char, std::vector<VariantCodon>> aminoAcidToCodons;
+
+        bool IsVariant() const { return !aminoAcidToCodons.empty(); }
     };
 
-    std::map<int, VariantPosition> relPositionToVariant;
+    std::map<int, std::shared_ptr<VariantPosition>> relPositionToVariant;
 
     JSON::Json ToJson() const
     {
@@ -78,13 +82,13 @@ struct VariantGene
         for (const auto& pos_variant : relPositionToVariant) {
             Json jVarPos;
             jVarPos["ref_position"] = pos_variant.first;
-            jVarPos["ref_codon"] = pos_variant.second.refCodon;
-            jVarPos["coverage"] = pos_variant.second.coverage;
-            jVarPos["ref_amino_acid"] = std::string(1, pos_variant.second.refAminoAcid);
+            jVarPos["ref_codon"] = pos_variant.second->refCodon;
+            jVarPos["coverage"] = pos_variant.second->coverage;
+            jVarPos["ref_amino_acid"] = std::string(1, pos_variant.second->refAminoAcid);
 
-            if (pos_variant.second.aminoAcidToCodons.empty()) continue;
+            if (pos_variant.second->aminoAcidToCodons.empty()) continue;
             std::vector<Json> jVarAAs;
-            for (const auto& aa_varCodon : pos_variant.second.aminoAcidToCodons) {
+            for (const auto& aa_varCodon : pos_variant.second->aminoAcidToCodons) {
                 Json jVarAA;
                 jVarAA["amino_acid"] = std::string(1, aa_varCodon.first);
                 std::vector<Json> jCodons;
@@ -96,13 +100,14 @@ struct VariantGene
                     jCodon["frequency"] = codon.frequency;
                     jCodon["pValue"] = codon.pValue;
                     jCodon["known_drm"] = codon.knownDRM;
+                    jCodon["haplotype_hit"] = codon.haplotypeHit;
                     jCodons.push_back(jCodon);
                 }
                 jVarAA["variant_codons"] = jCodons;
                 jVarAAs.push_back(jVarAA);
             }
             jVarPos["variant_amino_acids"] = jVarAAs;
-            jVarPos["msa"] = pos_variant.second.msa;
+            jVarPos["msa"] = pos_variant.second->msa;
             positions.push_back(jVarPos);
         }
         if (!positions.empty()) root["variant_positions"] = positions;
