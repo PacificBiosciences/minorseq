@@ -46,6 +46,19 @@ namespace Juliet {
 void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details)
 {
 #if 1
+    // Count number of haplotypes
+    int numHaplotypes = 0;
+    for (const auto& gene : j["genes"]) {
+        for (auto& variantPosition : gene["variant_positions"]) {
+            for (auto& variant_amino_acid : variantPosition["variant_amino_acids"]) {
+                for (auto& variant_codons : variant_amino_acid["variant_codons"]) {
+                    numHaplotypes = variant_codons["haplotype_hit"].size();
+                    break;
+                }
+            }
+        }
+    }
+
     auto strip = [](const std::string& input) {
         std::string s = input;
         s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
@@ -79,7 +92,10 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
             table td:nth-child(5) { background-color: #ddd; border-right: 1px dashed #bbb; }
             table td:nth-child(6) { background-color: #ccc; border-right: 1px dashed #aaa; }
             table td:nth-child(7) { background-color: #bbb;}
-            table td:nth-child(8) { background-color: #aaa; color: #fff600}
+            table td:nth-child(8) { background-color: #aaa; color: white}
+            table td:nth-child(8) { border-right:1px solid white;}
+            table td:nth-child(n+9) { border-left:1px dotted white;}
+            table td:nth-child(n+9) { background-color: #888;}
             tr:not(.msa):hover td { background-color: white; }
             tr:not(.msa):hover td:nth-child(8) { color: purple; }
             .msa table tr:hover td { background-color: gray; color:white; }
@@ -126,14 +142,21 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                 <col width="40px"/>
                 <col width="60px"/>
                 <col width="60px"/>
-                <col width="180px"/>
-                <tr>
-                <th colspan="9">)"
-            << strip(gene["name"]) << R"(</th>
+                <col width="180px"/>)";
+        for (int hap = 0; hap < numHaplotypes; ++hap) {
+            out << R"(<col width="40"/>)";
+        }
+        out << R"(<tr>
+                <th colspan=")"
+            << (8 + numHaplotypes) << R"(">)" << strip(gene["name"]) << R"(</th>
                 </tr>
                 <tr>
                 <th colspan="3">HXB2</th>
-                <th colspan="5">Sample</th>
+                <th colspan="5">Sample</th>)";
+        if (numHaplotypes > 0) {
+            out << R"(<th colspan=")" << numHaplotypes << R"(">Haplotypes</th>)";
+        }
+        out << R"(
                 </tr>
                 <tr>
                 <th>Codon</th>
@@ -143,9 +166,13 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                 <th colspan="1">Codon</th>
                 <th colspan="1">Frequency</th>
                 <th colspan="1">Coverage</th>
-                <th colspan="1">DRM</th>
-                </tr>)"
-            << std::endl;
+                <th colspan="1">DRM</th>)";
+        for (int hap = 0; hap < numHaplotypes; ++hap) {
+            out << R"(<th colspan="1">)";
+            out << std::string(1, 'A' + hap);
+            out << "</th>";
+        }
+        out << R"(</tr>)" << std::endl;
 
         for (auto& variantPosition : gene["variant_positions"]) {
             std::stringstream line;
@@ -165,7 +192,7 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                     line << "<td>" << strip(variant_amino_acid["amino_acid"]) << "</td>";
                     line << "<td>";
                     for (int j = 0; j < 3; ++j) {
-                        if (mutated[j]) line << "<b style=\"color:#ff5e5e; font-weight:normal\">";
+                        if (mutated[j]) line << "<b style=\"color:#B50A36; font-weight:normal\">";
                         line << strip(variant_codons["codon"])[j] << " ";
                         if (mutated[j]) line << "</b>";
                     }
@@ -188,6 +215,12 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                             << "<td></td>";
                     }
                     out << "<td>" << strip(variant_codons["known_drm"]) << "</td>";
+                    for (auto& hit : variant_codons["haplotype_hit"]) {
+                        if (hit)
+                            out << "<td style=\"background-color:#B50A36\"></td>";
+                        else
+                            out << "<td></td>";
+                    }
                     out << "</tr>" << std::endl;
                     line.str("");
 
@@ -196,12 +229,12 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                         <td colspan=3 style="background-color: white"></td>
                         <td colspan=14 style="padding:0; margin:0">
                         <table style="padding:0; margin:0">
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
-                        <col width="80px" />
+                        <col width="50px" />
+                        <col width="81px" />
+                        <col width="81px" />
+                        <col width="81px" />
+                        <col width="81px" />
+                        <col width="81px" />
                         <tr style="padding:0">
                         <th style="padding:2px 0 0px 0">Pos</th>
                         <th style="padding:2px 0 0px 0">A</th>
@@ -220,7 +253,7 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                             if (relPos >= 0 && relPos < 3 &&
                                 j ==
                                     Data::NucleotideToTag(strip(variant_codons["codon"])[relPos])) {
-                                out << "color:red;";
+                                out << "color:#B50A36;";
                             }
                             if (j == Data::NucleotideToTag(strip(column["wt"])[0]))
                                 out << "font-weight:bold;";

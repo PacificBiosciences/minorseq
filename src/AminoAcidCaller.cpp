@@ -139,17 +139,18 @@ std::string AminoAcidCaller::FindDRMs(const std::string& geneName,
 
 void AminoAcidCaller::PhaseVariants()
 {
-    std::vector<int> variantPositions;
-    for (const auto& vg : variantGenes_)
+    std::vector<std::pair<int, std::shared_ptr<VariantGene::VariantPosition>>> variantPositions;
+    for (const auto& vg : variantGenes_) {
         for (const auto& pos_vp : vg.relPositionToVariant)
-            for (const auto& aa_codon : pos_vp.second.aminoAcidToCodons)
-                for (const auto& varCodon : aa_codon.second)
-                    variantPositions.emplace_back(vg.geneOffset + pos_vp.first * 3);
+            if (pos_vp.second->IsVariant())
+                variantPositions.emplace_back(
+                    std::make_pair(vg.geneOffset + pos_vp.first * 3, pos_vp.second));
+    }
 
     if (verbose_) {
         std::cerr << "Variant positions:";
-        for (const auto& v : variantPositions)
-            std::cerr << " " << v;
+        for (const auto& pos_var : variantPositions)
+            std::cerr << " " << pos_var.first;
         std::cerr << std::endl;
     }
     std::vector<std::shared_ptr<Haplotype>> observations;
@@ -160,9 +161,9 @@ void AminoAcidCaller::PhaseVariants()
 
         // Get all codons for this row
         std::vector<std::string> codons;
-        for (const auto& v : variantPositions) {
+        for (const auto& pos_var : variantPositions) {
             std::string codon;
-            int local = v - msaByRow_.BeginPos - 3;
+            int local = pos_var.first - msaByRow_.BeginPos - 3;
             for (int i = 0; i < 3; ++i)
                 codon += row.Bases.at(local + i);
             codons.emplace_back(std::move(codon));
@@ -264,14 +265,32 @@ void AminoAcidCaller::PhaseVariants()
         }
     }
 
-    std::cerr << "#Haplotypes: " << generators.size() << std::endl;
-    double counts = 0;
-    for (auto& hn : generators)
-        counts += hn->Size();
-    std::cerr << "#Counts: " << counts << std::endl;
+    if (verbose_) {
+        std::cerr << "#Haplotypes: " << generators.size() << std::endl;
+        double counts = 0;
+        for (auto& hn : generators)
+            counts += hn->Size();
+        std::cerr << "#Counts: " << counts << std::endl;
 
-    for (auto& hn : generators)
-        std::cerr << hn->Size() / counts << "\t" << *hn << std::endl;
+        for (size_t genNumber = 0; genNumber < generators.size(); ++genNumber) {
+            auto& hn = generators.at(genNumber);
+            std::cerr << hn->Size() / counts << "\t" << hn->Size() << "\t";
+            size_t numCodons = hn->Codons.size();
+            for (size_t i = 0; i < numCodons; ++i) {
+                for (auto& kv : variantPositions.at(i).second->aminoAcidToCodons) {
+                    for (auto& vc : kv.second) {
+                        bool hit = hn->Codons.at(i) == vc.codon;
+                        vc.haplotypeHit.push_back(hit);
+                        if (hit) {
+                            std::cerr << termcolor::red;
+                        }
+                    }
+                }
+                std::cerr << hn->Codons.at(i) << termcolor::reset << " ";
+            }
+            std::cerr << std::endl;
+        }
+    }
 }
 
 double AminoAcidCaller::Probability(const std::string& a, const std::string& b)
@@ -311,7 +330,7 @@ void AminoAcidCaller::CallVariants()
         const int begin, const std::string& name) {
         geneName = name;
         if (!curVariantGene.relPositionToVariant.empty())
-            variantGenes_.push_back(std::move(curVariantGene));
+            variantGenes_.emplace_back(std::move(curVariantGene));
         curVariantGene = VariantGene();
         curVariantGene.geneName = name;
         curVariantGene.geneOffset = begin;
@@ -372,7 +391,9 @@ void AminoAcidCaller::CallVariants()
             const int bi = i - msaByRow_.BeginPos;
 
             const int codonPos = 1 + (ri / 3);
-            auto& curVariantPosition = curVariantGene.relPositionToVariant[codonPos];
+            curVariantGene.relPositionToVariant.emplace(
+                codonPos, std::make_shared<VariantGene::VariantPosition>());
+            auto& curVariantPosition = curVariantGene.relPositionToVariant.at(codonPos);
 
             std::map<std::string, int> codons;
             int coverage = 0;
@@ -399,11 +420,11 @@ void AminoAcidCaller::CallVariants()
             }
 
             if (hasReference) {
-                curVariantPosition.refCodon = targetConfig_.referenceSequence.substr(ai, 3);
-                if (AAT::FromCodon.find(curVariantPosition.refCodon) == AAT::FromCodon.cend()) {
+                curVariantPosition->refCodon = targetConfig_.referenceSequence.substr(ai, 3);
+                if (AAT::FromCodon.find(curVariantPosition->refCodon) == AAT::FromCodon.cend()) {
                     continue;
                 }
-                curVariantPosition.refAminoAcid = AAT::FromCodon.at(curVariantPosition.refCodon);
+                curVariantPosition->refAminoAcid = AAT::FromCodon.at(curVariantPosition->refCodon);
             } else {
                 int max = -1;
                 std::string argmax;
@@ -413,20 +434,20 @@ void AminoAcidCaller::CallVariants()
                         argmax = codon_counts.first;
                     }
                 }
-                curVariantPosition.refCodon = argmax;
-                if (AAT::FromCodon.find(curVariantPosition.refCodon) == AAT::FromCodon.cend()) {
+                curVariantPosition->refCodon = argmax;
+                if (AAT::FromCodon.find(curVariantPosition->refCodon) == AAT::FromCodon.cend()) {
                     continue;
                 }
-                curVariantPosition.refAminoAcid = AAT::FromCodon.at(curVariantPosition.refCodon);
+                curVariantPosition->refAminoAcid = AAT::FromCodon.at(curVariantPosition->refCodon);
             }
 
             for (const auto& codon_counts : codons) {
-                if (AAT::FromCodon.at(codon_counts.first) == curVariantPosition.refAminoAcid)
+                if (AAT::FromCodon.at(codon_counts.first) == curVariantPosition->refAminoAcid)
                     continue;
                 double p =
                     (Statistics::Fisher::fisher_exact_tiss(
                          codon_counts.second, coverage,
-                         coverage * Probability(curVariantPosition.refCodon, codon_counts.first),
+                         coverage * Probability(curVariantPosition->refCodon, codon_counts.first),
                          coverage) *
                      numberOfTests);
 
@@ -443,12 +464,12 @@ void AminoAcidCaller::CallVariants()
                     curVariantCodon.pValue = p;
                     curVariantCodon.knownDRM = FindDRMs(geneName, genes, codonPos);
 
-                    curVariantPosition.aminoAcidToCodons[AAT::FromCodon.at(codon_counts.first)]
+                    curVariantPosition->aminoAcidToCodons[AAT::FromCodon.at(codon_counts.first)]
                         .push_back(curVariantCodon);
                 }
             }
-            if (!curVariantPosition.aminoAcidToCodons.empty()) {
-                curVariantPosition.coverage = coverage;
+            if (!curVariantPosition->aminoAcidToCodons.empty()) {
+                curVariantPosition->coverage = coverage;
                 for (int j = -3; j < 6; ++j) {
                     if (i + j >= msaByRow_.BeginPos && i + j < msaByRow_.EndPos) {
                         int abs = ai + j;
@@ -466,7 +487,7 @@ void AminoAcidCaller::CallVariants()
                         else
                             msaCounts["wt"] = std::string(
                                 1, Data::TagToNucleotide(msaByColumn_[abs].MaxElement()));
-                        curVariantPosition.msa.push_back(msaCounts);
+                        curVariantPosition->msa.push_back(msaCounts);
                     }
                 }
             }
@@ -481,7 +502,7 @@ void AminoAcidCaller::CallVariants()
                   << falsePositives << std::endl;
     }
     if (!curVariantGene.relPositionToVariant.empty())
-        variantGenes_.push_back(std::move(curVariantGene));
+        variantGenes_.emplace_back(std::move(curVariantGene));
 }
 
 JSON::Json AminoAcidCaller::JSON()
