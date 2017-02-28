@@ -54,6 +54,7 @@
 #include <pacbio/data/MSAByColumn.h>
 #include <pacbio/data/MSAByRow.h>
 #include <pacbio/juliet/ErrorEstimates.h>
+#include <pacbio/juliet/Haplotype.h>
 #include <pacbio/juliet/JulietSettings.h>
 #include <pacbio/juliet/TargetConfig.h>
 #include <pacbio/juliet/TransitionTable.h>
@@ -97,6 +98,7 @@ public:
 
 private:
     std::vector<VariantGene> variantGenes_;
+    std::vector<Haplotype> reconstructedHaplotypes_;
     const ErrorEstimates error_;
     const TargetConfig targetConfig_;
     const bool verbose_;

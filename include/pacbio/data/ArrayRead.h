@@ -55,7 +55,7 @@ namespace Data {
 char TagToNucleotide(uint8_t t);
 uint8_t NucleotideToTag(char t);
 #else  // C++14
-// Convert {0, 1, 2, 3, 4} to {'A', 'C', 'G', 'T', '-'}
+// Convert {0, 1, 2, 3, 4, 5} to {'A', 'C', 'G', 'T', '-', 'N'}
 static constexpr char TagToNucleotide(uint8_t t)
 {
     switch (t) {
@@ -69,12 +69,14 @@ static constexpr char TagToNucleotide(uint8_t t)
             return 'T';
         case 4:
             return '-';
+        case 5:
+            return 'N';
         default:
-            return 0;
+            return '?';
             // throw std::runtime_error("Woot is that tag? " + std::to_string(t));
     }
 }
-// Convert {'A', 'C', 'G', 'T', '-', 'N'} to {0, 1, 2, 3, 4, 4}
+// Convert {'A', 'C', 'G', 'T', '-', 'N'} to {0, 1, 2, 3, 4, 5}
 static constexpr uint8_t NucleotideToTag(char t)
 {
     switch (t) {
@@ -86,12 +88,12 @@ static constexpr uint8_t NucleotideToTag(char t)
             return 2;
         case 'T':
             return 3;
-        case 'N':
-            return 4;
         case '-':
             return 4;
+        case 'N':
+            return 5;
         default:
-            return 0;
+            return 255;
             // throw std::runtime_error("Woot is that char " + std::to_string(t));
     }
 }

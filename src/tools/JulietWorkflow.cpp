@@ -132,11 +132,11 @@ void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
         // Store msa + p-values
         if (settings.SaveMSA) {
             std::ofstream msaStream(outputPrefix + ".msa");
-            msaStream << "pos A C G T N" << std::endl;
+            msaStream << "pos A C G T - N" << std::endl;
             int pos = aac.msaByColumn_.beginPos;
             for (auto& column : aac.msaByColumn_) {
                 msaStream << ++pos;
-                const std::array<int, 5>& counts = column;
+                const std::array<int, 6>& counts = column;
                 for (const auto& c : counts)
                     msaStream << " " << c;
                 msaStream << std::endl;

@@ -109,7 +109,7 @@ struct MSAByRow
                     if (b.MeetQVThresholds(qvThresholds))
                         row.Bases[pos++] = b.Nucleotide;
                     else
-                        row.Bases[pos++] = '-';
+                        row.Bases[pos++] = 'N';
                     break;
                 case 'D':
                     CheckInsertion();

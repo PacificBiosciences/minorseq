@@ -115,6 +115,8 @@ char TagToNucleotide(uint8_t t)
             return 'T';
         case 4:
             return '-';
+        case 5:
+            return 'N';
         default:
             throw std::runtime_error("Unsupported tag: " + std::to_string(t));
     }
@@ -132,8 +134,9 @@ uint8_t NucleotideToTag(char t)
         case 'T':
             return 3;
         case '-':
-        case 'N':
             return 4;
+        case 'N':
+            return 5;
         default:
             throw std::runtime_error("Unsupported character: " + std::to_string(t));
     }
