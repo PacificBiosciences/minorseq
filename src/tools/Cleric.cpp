@@ -75,20 +75,23 @@ void Cleric::Convert(const std::string& outputFile)
     toReferenceGapless_ = RemoveGaps(toReferenceSequence_);
     fromReferenceGapless_ = RemoveGaps(fromReferenceSequence_);
 
-    const auto GetGaplessMapping = [](const std::string& refBases, std::map<int, int>* map) {
-        int pos = 0;
-        for (size_t i = 0; i < refBases.size(); ++i) {
-            if (refBases.at(i) != '-') {
-                if (map->find(i) == map->cend()) {
-                    map->emplace(pos, i);
-                }
-                ++pos;
+    for (size_t pos = 0, i = 0; i < fromReferenceSequence_.size(); ++i) {
+        if (fromReferenceSequence_.at(i) != '-') {
+            if (sam_pos_to_fasta_pos.find(i) == sam_pos_to_fasta_pos.cend()) {
+                sam_pos_to_fasta_pos.emplace(pos, i);
             }
+            ++pos;
         }
-    };
+    }
 
-    GetGaplessMapping(fromReferenceSequence_, &sam_pos_to_fasta_pos);
-    GetGaplessMapping(toReferenceSequence_, &fasta_pos_to_sam_pos);
+    for (size_t pos = 0, i = 0; i < toReferenceSequence_.size(); ++i) {
+        if (toReferenceSequence_.at(i) != '-') {
+            if (fasta_pos_to_sam_pos.find(i) == fasta_pos_to_sam_pos.cend()) {
+                fasta_pos_to_sam_pos.emplace(i, pos);
+            }
+            ++pos;
+        }
+    }
 
     BAM::BamHeader h = in.Header().DeepCopy();
     h.ClearSequences();
