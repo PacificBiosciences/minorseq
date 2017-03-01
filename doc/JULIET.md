@@ -18,7 +18,7 @@ provide one BAM per barcode.
 
 ## Scope
 Current scope of *Juliet* is identification of codon-wise variants in coding
-regions.
+regions. Phasing of variants is work in progress.
 
 ## Output
 *Juliet* provides a JSON and HTML file. The JSON file contains for each gene
@@ -29,6 +29,8 @@ counts of the multiple-sequence alignment of the -3 to +3 context positions.
 
 The HTML page is a 1:1 conversion of the JSON file and contains the identical
 information, only human-readable.
+
+<img src="img/juliet_hiv-context.png" width="500px">
 
 ## Target configuration
 *Juliet* is a multi purpose minor variant caller with preinstalled configurations.
@@ -57,42 +59,18 @@ Save following as hiv.json:
 {
     "genes": [
         {
-            "begin": 2253,
-            "drms": [
-                {
-                    "name": "PI",
-                    "positions": [ 24,32,46,47,50,54,76,82,84,88,90 ]
-                },
-                {
-                    "name": "PI S",
-                    "positions": [ 23,24,30,32,46,47,48,50,53,54,73,76,82,83,84,85,88,90 ]
-                }
-            ],
-            "end": 2550,
-            "name": "Protease"
-        },
-        {
             "begin": 2550,
             "drms": [
                 {
-                    "name": "NNRTI",
-                    "positions": [ 100,101,103,106,138,179,181,190,190,227,230 ]
-                },
-                {
-                    "name": "NNRTI S",
-                    "positions": [ 65,67,69,70,74,75,77,115,116,141,151,184,210,215,219 ]
+                    "name": "fancy drug",
+                    "positions": [ 41 ]
                 }
             ],
-            "end": 3870,
+            "end": 2700,
             "name": "Reverse Transcriptase"
-        },
-        {
-            "begin": 3870,
-            "drms": [],
-            "end": 4230,
-            "name": "RNase"
         }
     ],
+    "referenceName": "my seq",
     "referenceSequence": "TGGAAGGGCT..."
 }
 ```
@@ -114,6 +92,23 @@ $ juliet data.align.bam -o patientZero
 ```
 
 <img src="img/juliet_hiv-unknown.png" width="500px">
+
+## Phasing
+
+*Juliet* default mode is amino-acid / codon calling. Using `--mode phasing`,
+variant calls from identical haplotype being clustered and visualized in the
+HTML output. The row-wise variant calls are "transposed" onto the per column
+haplotypes. For each variant, the haplotype shows a colored box, wild type is
+represented by plain dark gray. A color gradiant helps to distinguish between
+columns.
+
+<img src="img/juliet_hiv-phasing.png" width="700px">
+
+The JSON variant positions has an additional `haplotype_hit` bool array
+with the length equal to the number of haplotypes. Each entry indicates if that
+variant is present in the haplotype. A `haplotype` block under the root of the
+JSON file contains counts and read names. The order of those haplotypes matches
+the order of all `haplotype_hit` arrays.
 
 # FAQ
 
