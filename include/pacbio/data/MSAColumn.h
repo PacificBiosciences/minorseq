@@ -60,7 +60,7 @@ public:
     int operator[](char c) const { return counts[NucleotideToTag(c)]; }
     int& operator[](char c) { return counts[NucleotideToTag(c)]; }
 
-    operator std::array<int, 5>() { return counts; }
+    operator std::array<int, 6>() { return counts; }
     explicit operator int() { return Coverage(); }
 
 public:
@@ -95,18 +95,18 @@ public:
 
 public:
     int refPos = -1;
-    std::array<int, 5> counts{{0, 0, 0, 0, 0}};
+    std::array<int, 6> counts{{0, 0, 0, 0, 0, 0}};
     std::map<std::string, int> insertions;
     std::map<std::string, double> insertionsPValues;
-    std::array<double, 5> pValues{{1, 1, 1, 1, 1}};
-    std::array<double, 5> mask{{0, 0, 0, 0, 0}};
+    std::array<double, 6> pValues{{1, 1, 1, 1, 1, 1}};
+    std::array<double, 6> mask{{0, 0, 0, 0, 0, 0}};
     bool hit = false;
     int argMax = 0;
 
 public:
     friend std::ostream& operator<<(std::ostream& stream, const MSAColumn& r)
     {
-        for (int j = 0; j < 5; ++j)
+        for (int j = 0; j < 6; ++j)
             stream << r.counts.at(j) << "\t" << r.pValues.at(j) << "\t";
         return stream;
     }

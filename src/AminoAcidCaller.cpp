@@ -57,7 +57,6 @@
 
 #include <pacbio/juliet/AminoAcidCaller.h>
 #include <pacbio/juliet/AminoAcidTable.h>
-#include <pacbio/juliet/Haplotype.h>
 #include <pacbio/statistics/Fisher.h>
 #include <pacbio/util/Termcolor.h>
 #include <pbcopper/json/JSON.h>
@@ -265,31 +264,33 @@ void AminoAcidCaller::PhaseVariants()
         }
     }
 
-    if (verbose_) {
-        std::cerr << "#Haplotypes: " << generators.size() << std::endl;
-        double counts = 0;
-        for (auto& hn : generators)
-            counts += hn->Size();
-        std::cerr << "#Counts: " << counts << std::endl;
+    if (verbose_) std::cerr << "#Haplotypes: " << generators.size() << std::endl;
+    double counts = 0;
+    for (auto& hn : generators)
+        counts += hn->Size();
+    if (verbose_) std::cerr << "#Counts: " << counts << std::endl;
 
-        for (size_t genNumber = 0; genNumber < generators.size(); ++genNumber) {
-            auto& hn = generators.at(genNumber);
-            std::cerr << hn->Size() / counts << "\t" << hn->Size() << "\t";
-            size_t numCodons = hn->Codons.size();
-            for (size_t i = 0; i < numCodons; ++i) {
-                for (auto& kv : variantPositions.at(i).second->aminoAcidToCodons) {
-                    for (auto& vc : kv.second) {
-                        bool hit = hn->Codons.at(i) == vc.codon;
-                        vc.haplotypeHit.push_back(hit);
-                        if (hit) {
-                            std::cerr << termcolor::red;
-                        }
+    for (size_t genNumber = 0; genNumber < generators.size(); ++genNumber) {
+        auto& hn = generators.at(genNumber);
+        hn->GlobalFrequency = hn->Size() / counts;
+        hn->Name = std::string(1, 'A' + genNumber);
+        if (verbose_) std::cerr << hn->GlobalFrequency << "\t" << hn->Size() << "\t";
+        size_t numCodons = hn->Codons.size();
+        for (size_t i = 0; i < numCodons; ++i) {
+            for (auto& kv : variantPositions.at(i).second->aminoAcidToCodons) {
+                for (auto& vc : kv.second) {
+                    bool hit = hn->Codons.at(i) == vc.codon;
+                    vc.haplotypeHit.push_back(hit);
+                    if (hit) {
+                        std::cerr << termcolor::red;
                     }
                 }
-                std::cerr << hn->Codons.at(i) << termcolor::reset << " ";
             }
-            std::cerr << std::endl;
+            if (verbose_) std::cerr << hn->Codons.at(i) << termcolor::reset << " ";
         }
+        if (verbose_) std::cerr << std::endl;
+
+        reconstructedHaplotypes_.push_back(*hn);
     }
 }
 
@@ -406,7 +407,6 @@ void AminoAcidCaller::CallVariants()
                 // Read does not cover codon
                 if (bi + 2 > static_cast<int>(row.size()) || bi < 0) continue;
                 if (CodonContains(' ')) continue;
-                ++coverage;
 
                 // Read has a deletion
                 if (CodonContains('-')) continue;
@@ -415,6 +415,7 @@ void AminoAcidCaller::CallVariants()
 
                 // Codon is bogus
                 if (AAT::FromCodon.find(codon) == AAT::FromCodon.cend()) continue;
+                ++coverage;
 
                 codons[codon]++;
             }
@@ -481,6 +482,7 @@ void AminoAcidCaller::CallVariants()
                         msaCounts["G"] = msaByColumn_[abs][2];
                         msaCounts["T"] = msaByColumn_[abs][3];
                         msaCounts["-"] = msaByColumn_[abs][4];
+                        msaCounts["N"] = msaByColumn_[abs][5];
                         if (hasReference)
                             msaCounts["wt"] =
                                 std::string(1, targetConfig_.referenceSequence.at(abs));
@@ -515,6 +517,11 @@ JSON::Json AminoAcidCaller::JSON()
         if (j.find("variant_positions") != j.cend()) genes.push_back(j);
     }
     root["genes"] = genes;
+    std::vector<Json> haplotypes;
+    for (const auto& h : reconstructedHaplotypes_) {
+        haplotypes.push_back(h.ToJson());
+    }
+    root["haplotypes"] = haplotypes;
 
     return root;
 }

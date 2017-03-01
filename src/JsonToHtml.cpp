@@ -238,11 +238,12 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                         <td colspan=14 style="padding:0; margin:0">
                         <table style="padding:0; margin:0">
                         <col width="50px" />
-                        <col width="81px" />
-                        <col width="81px" />
-                        <col width="81px" />
-                        <col width="81px" />
-                        <col width="81px" />
+                        <col width="67px" />
+                        <col width="67px" />
+                        <col width="67px" />
+                        <col width="67px" />
+                        <col width="67px" />
+                        <col width="67px" />
                         <tr style="padding:0">
                         <th style="padding:2px 0 0px 0">Pos</th>
                         <th style="padding:2px 0 0px 0">A</th>
@@ -250,13 +251,14 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                         <th style="padding:2px 0 0px 0">G</th>
                         <th style="padding:2px 0 0px 0">T</th>
                         <th style="padding:2px 0 0px 0">-</th>
+                        <th style="padding:2px 0 0px 0">N</th>
                         </tr>
                         )";
 
                     for (auto& column : variantPosition["msa"]) {
                         int relPos = column["rel_pos"];
                         out << "<tr><td>" << relPos << "</td>" << std::endl;
-                        for (int j = 0; j < 5; ++j) {
+                        for (int j = 0; j < 6; ++j) {
                             out << "<td style=\"";
                             if (relPos >= 0 && relPos < 3 &&
                                 j ==

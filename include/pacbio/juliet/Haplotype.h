@@ -2,13 +2,17 @@
 
 #include <pacbio/util/Termcolor.h>
 
+#include <pbcopper/json/JSON.h>
+
 namespace PacBio {
 namespace Juliet {
 struct Haplotype
 {
+    std::string Name;
     std::vector<std::string> Names;
     std::vector<std::string> Codons;
     double SoftCollapses = 0;
+    double GlobalFrequency = 0;
     bool NoGaps = true;
 
     double Size() const { return Names.size() + SoftCollapses; }
@@ -22,7 +26,8 @@ struct Haplotype
     {
         Codons = std::forward<std::vector<std::string>>(codons);
         for (const auto& c : Codons) {
-            if (c.find('-') != std::string::npos) {
+            if (c.find('-') != std::string::npos || c.find('N') != std::string::npos ||
+                c.find(' ') != std::string::npos) {
                 NoGaps = false;
                 break;
             }
@@ -43,6 +48,18 @@ struct Haplotype
             stream << " " << c << termcolor::reset;
         }
         return stream;
+    }
+
+    JSON::Json ToJson() const
+    {
+        using namespace JSON;
+        Json root;
+        root["name"] = Name;
+        root["reads_hard"] = Names.size();
+        root["reads_soft"] = Size();
+        root["frequency"] = GlobalFrequency;
+        root["read_names"] = Names;
+        return root;
     }
 };
 }
