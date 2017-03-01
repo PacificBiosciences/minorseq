@@ -84,6 +84,8 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
             tr:nth-child(3) th { padding: 5px 5px 5px 5px; text-align: center; border-bottom: 1px solid #2d2d2d; }
             tr:nth-child(2) th:nth-child(2) { border-left: 1px dashed black; }
             tr:nth-child(3) th:nth-child(3) { border-right: 1px dashed black; }
+            tr:nth-child(2) th:nth-child(2) { border-right: 1px dashed black; }
+            tr:nth-child(3) th:nth-child(8) { border-right: 1px dashed black; }
             td { padding: 15px 5px 15px 5px; text-align: center; border-bottom: 1px solid white; }
             table td:nth-child(1) { background-color:#ddd; border-right: 1px solid #eee; }
             table td:nth-child(2) { background-color:#eee; border-right: 1px solid #ddd; }
@@ -95,7 +97,7 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
             table td:nth-child(8) { background-color: #aaa; color: white}
             table td:nth-child(8) { border-right:1px solid white;}
             table td:nth-child(n+9) { border-left:1px dotted white;}
-            table td:nth-child(n+9) { background-color: #888;}
+            table td:nth-child(n+9) { background-color: #4a4a4a;}
             tr:not(.msa):hover td { background-color: white; }
             tr:not(.msa):hover td:nth-child(8) { color: purple; }
             .msa table tr:hover td { background-color: gray; color:white; }
@@ -154,7 +156,7 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                 <th colspan="3">HXB2</th>
                 <th colspan="5">Sample</th>)";
         if (numHaplotypes > 0) {
-            out << R"(<th colspan=")" << numHaplotypes << R"(">Haplotypes</th>)";
+            out << R"(<th colspan=")" << numHaplotypes << R"(">Haplotypes %</th>)";
         }
         out << R"(
                 </tr>
@@ -163,13 +165,13 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                 <th>AA</th>
                 <th>Pos</th>
                 <th>AA</th>
-                <th colspan="1">Codon</th>
-                <th colspan="1">Frequency</th>
-                <th colspan="1">Coverage</th>
-                <th colspan="1">DRM</th>)";
+                <th>Codon</th>
+                <th>Frequency</th>
+                <th>Coverage</th>
+                <th>DRM</th>)";
         for (int hap = 0; hap < numHaplotypes; ++hap) {
-            out << R"(<th colspan="1">)";
-            out << std::string(1, 'A' + hap);
+            out << R"(<th>)"
+                << std::round(1000 * static_cast<double>(j["haplotypes"][hap]["frequency"])) / 10;
             out << "</th>";
         }
         out << R"(</tr>)" << std::endl;
@@ -215,11 +217,17 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
                             << "<td></td>";
                     }
                     out << "<td>" << strip(variant_codons["known_drm"]) << "</td>";
+                    static std::vector<std::string> colors = {"#b50937", "#b22450", "#b2385e",
+                                                              "#b24f6e", "#b2647c", "#b27487",
+                                                              "#b28391", "#b2909b", "#b29ea5"};
+                    int col = 0;
                     for (auto& hit : variant_codons["haplotype_hit"]) {
                         if (hit)
-                            out << "<td style=\"background-color:#B50A36\"></td>";
+                            out << "<td style=\"background-color:" << colors.at(col % colors.size())
+                                << "\"></td>";
                         else
                             out << "<td></td>";
+                        ++col;
                     }
                     out << "</tr>" << std::endl;
                     line.str("");
