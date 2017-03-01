@@ -93,12 +93,14 @@ public:
 
 public:
     std::vector<TargetGene> targetGenes;
+    std::string referenceName;
     std::string referenceSequence;
     bool HasExpectedMinors() const;
     size_t NumExpectedMinors() const;
 
 private:
     static std::string DetermineConfigInput(const std::string& input);
+    static std::string ReferenceNameFromJson(const JSON::Json& root);
     static std::string ReferenceSequenceFromJson(const JSON::Json& root);
     static std::vector<TargetGene> TargetGenesFromJson(const JSON::Json& root);
 

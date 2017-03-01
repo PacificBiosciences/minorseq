@@ -49,7 +49,8 @@ class JsonToHtml
 {
 public:
     /// Generate HTML output of variant amino acids
-    static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
+    static void HTML(std::ostream& out, const JSON::Json& j, const std::string referenceName,
+                     bool onlyKnownDRMs, bool details);
 };
 }
 }  //::PacBio::Juliet

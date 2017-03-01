@@ -127,7 +127,8 @@ void JulietWorkflow::AminoPhasing(const JulietSettings& settings,
         jsonStream << json.dump(2) << std::endl;
 
         std::ofstream htmlStream(outputPrefix + ".html");
-        JsonToHtml::HTML(htmlStream, json, settings.DRMOnly, settings.Details);
+        JsonToHtml::HTML(htmlStream, json, settings.TargetConfigUser.referenceName,
+                         settings.DRMOnly, settings.Details);
 
         // Store msa + p-values
         if (settings.SaveMSA) {

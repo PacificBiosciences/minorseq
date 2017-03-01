@@ -43,7 +43,8 @@ namespace Juliet {
 
 /// Generate HTML output of variant amino acids
 
-void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details)
+void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, const std::string referenceName,
+                      bool onlyKnownDRMs, bool details)
 {
 #if 1
     // Count number of haplotypes
@@ -64,7 +65,9 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
         s.erase(std::remove(s.begin(), s.end(), '\"'), s.end());
         return s;
     };
-    out << "<html>" << std::endl
+    out << "<!-- Juliet Minor Variant Summary by Dr. Armin Toepfer (Pacific Biosciences) -->"
+        << std::endl
+        << "<html>" << std::endl
         << "<head>" << std::endl
         << R"(
             <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
@@ -83,9 +86,12 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
             tr:nth-child(1) { background-color: #3d3d3d; color: white; }
             tr:nth-child(3) th { padding: 5px 5px 5px 5px; text-align: center; border-bottom: 1px solid #2d2d2d; }
             tr:nth-child(2) th:nth-child(2) { border-left: 1px dashed black; }
-            tr:nth-child(3) th:nth-child(3) { border-right: 1px dashed black; }
+            tr:nth-child(3) th:nth-child(3) { border-right: 1px dashed black; })";
+    if (numHaplotypes)
+        out << R"(
             tr:nth-child(2) th:nth-child(2) { border-right: 1px dashed black; }
-            tr:nth-child(3) th:nth-child(8) { border-right: 1px dashed black; }
+            tr:nth-child(3) th:nth-child(8) { border-right: 1px dashed black; })";
+    out << R"(
             td { padding: 15px 5px 15px 5px; text-align: center; border-bottom: 1px solid white; }
             table td:nth-child(1) { background-color:#ddd; border-right: 1px solid #eee; }
             table td:nth-child(2) { background-color:#eee; border-right: 1px solid #ddd; }
@@ -113,10 +119,10 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
         << R"(<body>
             <details style="margin-bottom: 20px">
             <summary>Legend</summary>
-            <p>Every table represents a gene in the Pol polyprotein.<br/>
+            <p>Every table represents a gene.<br/>
             Each row stands for a mutated amino acid. Positions are relative to the current gene.<br/>
             Positions with no or synonymous mutation are not being shown.<br/>
-            The used reference is HXB2 and all coordinates are in reference space.<br/>
+            All coordinates are in reference space.<br/>
             The mutated nucleotide is highlighted in the codon.<br/>
             Frequency is per codon.<br/>
             Coverage includes deletions.<br/>
@@ -153,7 +159,13 @@ void JsonToHtml::HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs
             << (8 + numHaplotypes) << R"(">)" << strip(gene["name"]) << R"(</th>
                 </tr>
                 <tr>
-                <th colspan="3">HXB2</th>
+                <th colspan="3">)";
+        if (referenceName.empty()) out << "unknown";
+        if (referenceName.size() > 11)
+            out << referenceName.substr(0, 11) << "...";
+        else
+            out << referenceName;
+        out << R"(</th>
                 <th colspan="5">Sample</th>)";
         if (numHaplotypes > 0) {
             out << R"(<th colspan=")" << numHaplotypes << R"(">Haplotypes %</th>)";

@@ -77,8 +77,6 @@ public:
     JSON::Json JSON();
 
 public:
-    /// Generate HTML output of variant amino acids
-    static void HTML(std::ostream& out, const JSON::Json& j, bool onlyKnownDRMs, bool details);
     void PhaseVariants();
 
 private:
