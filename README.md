@@ -5,20 +5,12 @@
 <p align="center">Minor Variant Calling and Phasing Tools</p>
 
 ***
+
 ## Availability
-The latest pre-release, developers-only linux binaries can be installed via [bioconda](https://bioconda.github.io/):
+Latest version can be installed via bioconda package `minorseq`.
 
-    conda install minorseq
-
-These binaries are not ISO compliant.
-For research only.
-Not for use in diagnostics procedures.
-
-Official support is only provided for official and stable [SMRT Analysis builds](http://www.pacb.com/products-and-services/analytical-software/)
-provided by PacBio.
-
-Unofficial support for binary pre-releases is provided via github issues,
-not via mail to developers.
+Please refer to our [official pbbioconda page](https://github.com/PacificBiosciences/pbbioconda)
+for information on Installation, Support, License, Copyright, and Disclaimer.
 
 ## Quick Tools Overview
 
