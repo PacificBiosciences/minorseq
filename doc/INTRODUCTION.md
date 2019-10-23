@@ -14,12 +14,12 @@ Create CCS2 reads from your sequel chip
 > Juliet currently uses PacBio CCS reads as input. The use of CCS rich QVs allows sensitive minor variant calling.
 
 ```
-ccs --richQVs m54000_170101_050702_3545456.subreadset.xml yourdata.ccs.bam
+ccs m54000_170101_050702_3545456.subreadset.xml yourdata.ccs.bam
 ```
 
 --------
 ### Step 3
-Filter CCS2 reads as described here: [JULIETFLOW.md#filtering](JULIETFLOW.md#filtering)
+Filter CCS reads as described here: [JULIETFLOW.md#filtering](JULIETFLOW.md#filtering)
 
 > To ensure a uniform noise profile, we filter to 99% predicted
 >  accuracy. Barcode demultiplexing might be done.
